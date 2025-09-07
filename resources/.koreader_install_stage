@@ -1,0 +1,259 @@
+{
+  "current_stage": "completed",
+  "stage_status": "pending",
+  "installation_type": "full",
+  "STAGE": "completed",
+  "REMARKABLE_IP": null,
+  "REMARKABLE_PASSWORD": null,
+  "DEVICE_TYPE": null,
+  "BACKUP_NAME": "",
+  "installation_started_at": null,
+  "current_stage_started_at": null,
+  "last_updated_at": null,
+  "total_steps": 0,
+  "completed_steps": 0,
+  "last_error": null,
+  "failed_steps": [],
+  "stage_steps": {
+    "1": [
+      {
+        "name": "device_setup",
+        "description": "Configure device connection and validation",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "device_detection",
+        "description": "Detect device architecture and type",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "backup_creation",
+        "description": "Create comprehensive system backup",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "file_download",
+        "description": "Download required installation files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "xovi_installation",
+        "description": "Install XOVI framework",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "extensions_installation",
+        "description": "Install qt-resource-rebuilder and AppLoad",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "shims_setup",
+        "description": "Configure qtfb-shim files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "appload_configuration",
+        "description": "Configure AppLoad extension",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "hashtable_rebuild",
+        "description": "Rebuild hashtable (will restart UI)",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      }
+    ],
+    "2": [
+      {
+        "name": "device_ready_wait",
+        "description": "Wait for device to be ready after restart",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "xovi_startup",
+        "description": "Start XOVI services",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "koreader_installation",
+        "description": "Install and configure KOReader",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "ui_restart",
+        "description": "Restart reMarkable UI",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "installation_verification",
+        "description": "Verify installation components",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "cleanup",
+        "description": "Clean up temporary files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      }
+    ],
+    "launcher_only": [
+      {
+        "name": "device_setup",
+        "description": "Configure device connection and validation",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "device_detection",
+        "description": "Detect device architecture and type",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "backup_creation",
+        "description": "Create comprehensive system backup",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "file_download",
+        "description": "Download required installation files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "xovi_installation",
+        "description": "Install XOVI framework",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "extensions_installation",
+        "description": "Install qt-resource-rebuilder and AppLoad",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "shims_setup",
+        "description": "Configure qtfb-shim files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "appload_configuration",
+        "description": "Configure AppLoad extension",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "hashtable_rebuild",
+        "description": "Rebuild hashtable (will restart UI)",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "device_ready_wait",
+        "description": "Wait for device to be ready after restart",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "xovi_startup",
+        "description": "Start XOVI services",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "ui_restart",
+        "description": "Restart reMarkable UI",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "installation_verification",
+        "description": "Verify launcher installation",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      },
+      {
+        "name": "cleanup",
+        "description": "Clean up temporary files",
+        "status": "pending",
+        "started_at": null,
+        "completed_at": null,
+        "error_message": null
+      }
+    ]
+  },
+  "backup_info": null,
+  "state_version": "1.0"
+}

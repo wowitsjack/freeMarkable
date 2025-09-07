@@ -1,0 +1,44 @@
+# Core Dependencies for freeMarkable
+
+# SSH/SCP Operations
+paramiko>=2.9.0,<4.0.0
+
+# GUI Framework
+customtkinter>=5.0.0
+
+# HTTP Requests (alternative to urllib for better error handling)
+requests>=2.25.0,<3.0.0
+
+# Progress bars and UI enhancements
+tqdm>=4.60.0
+
+# Optional Dependencies for Enhanced Functionality
+
+# Better logging and configuration
+colorlog>=6.0.0
+
+# Enhanced file operations
+send2trash>=1.8.0
+
+# System information gathering
+psutil>=5.8.0
+
+# Development Dependencies (install with: pip install -r requirements-dev.txt)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.991
+# pre-commit>=2.17.0
+
+# Platform-specific Dependencies
+
+# Windows-specific (automatically installed on Windows)
+pywin32>=227; sys_platform == "win32"
+
+# macOS-specific (automatically installed on macOS) 
+pyobjc-framework-Cocoa>=8.0; sys_platform == "darwin"
+
+# Linux-specific
+# Most Linux dependencies are handled by the system package manager
+# Users may need to install: sudo apt-get install python3-tk (for tkinter support)
