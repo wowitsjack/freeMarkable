@@ -75,15 +75,9 @@ class InstallationService:
         
         self._logger = logging.getLogger(__name__)
         
-        # Download URLs from config
-        self.download_urls = {
-            'xovi_extensions': config.downloads.xovi_extensions_url,
-            'appload': config.downloads.appload_url,
-            'xovi_binary': config.downloads.xovi_binary_url,
-            'koreader': config.downloads.koreader_url,
-            'xovi_tripletap': config.downloads.xovi_tripletap_url,
-            'appload_extension': 'https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so'
-        }
+        # Download URLs from config - will be updated based on device architecture
+        self.download_urls = {}
+        self._update_urls_for_device()
     
     def set_progress_callback(self, callback: Callable[[InstallationProgress], None]) -> None:
         """Set progress callback for installation updates."""
@@ -92,6 +86,30 @@ class InstallationService:
     def set_output_callback(self, callback: Callable[[str], None]) -> None:
         """Set output callback for installation messages."""
         self.output_callback = callback
+    
+    def _update_urls_for_device(self) -> None:
+        """Update download URLs based on device architecture."""
+        device_type = self.device.device_type if hasattr(self.device, 'device_type') else None
+        
+        # Get architecture-specific URLs
+        self.download_urls = {
+            'xovi_extensions': self.config.downloads.get_url_for_architecture('xovi_extensions', device_type),
+            'appload': self.config.downloads.get_url_for_architecture('appload', device_type),
+            'xovi_binary': self.config.downloads.get_url_for_architecture('xovi_binary', device_type),
+            'koreader': self.config.downloads.get_url_for_architecture('koreader', device_type),
+            'xovi_tripletap': self.config.downloads.xovi_tripletap_url,  # This doesn't have arch variants
+            'appload_extension': 'https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so'
+        }
+        
+        # Get architecture-specific filenames
+        self.download_filenames = {
+            'xovi_extensions': self.config.downloads.get_filename_for_architecture('xovi_extensions', device_type),
+            'appload': self.config.downloads.get_filename_for_architecture('appload', device_type),
+            'xovi_binary': self.config.downloads.get_filename_for_architecture('xovi_binary', device_type),
+            'koreader': self.config.downloads.get_filename_for_architecture('koreader', device_type)
+        }
+        
+        self._log_output(f"Updated URLs for device architecture: {device_type.architecture if device_type and hasattr(device_type, 'architecture') else 'default'}")
     
     def _log_output(self, message: str) -> None:
         """Log output message."""
@@ -342,10 +360,13 @@ class InstallationService:
         """Download files needed for Stage 1."""
         self._log_output("Downloading required files...")
         
+        # Update URLs for current device before downloading
+        self._update_urls_for_device()
+        
         files_to_download = [
-            ('xovi_extensions', 'extensions-arm32-testing.zip'),
-            ('appload', 'appload-arm32.zip'),
-            ('xovi_binary', 'xovi-arm32.so')
+            ('xovi_extensions', self.download_filenames['xovi_extensions']),
+            ('appload', self.download_filenames['appload']),
+            ('xovi_binary', self.download_filenames['xovi_binary'])
         ]
         
         try:
@@ -356,9 +377,10 @@ class InstallationService:
                 file_item = self.file_service.download_file(url, filename)
                 self._log_output(f"Downloaded {filename} ({file_item.size} bytes)")
             
-            # Extract appload-arm32.zip locally like Bash script does (line 556)
+            # Extract appload package locally like Bash script does (line 556)
             self._log_output("Extracting AppLoad package locally...")
-            appload_zip = self.config.get_downloads_directory() / 'appload-arm32.zip'
+            appload_filename = self.download_filenames['appload']
+            appload_zip = self.config.get_downloads_directory() / appload_filename
             if appload_zip.exists():
                 import zipfile
                 with zipfile.ZipFile(appload_zip, 'r') as zip_ref:
@@ -376,8 +398,12 @@ class InstallationService:
         self._log_output("Downloading KOReader...")
         
         try:
+            # Update URLs for current device before downloading
+            self._update_urls_for_device()
+            
             url = self.download_urls['koreader']
-            file_item = self.file_service.download_file(url, 'koreader-remarkable.zip')
+            filename = self.download_filenames['koreader']
+            file_item = self.file_service.download_file(url, filename)
             self._log_output(f"Downloaded KOReader ({file_item.size} bytes)")
             return True
             
@@ -391,7 +417,8 @@ class InstallationService:
         
         try:
             # Upload and extract XOVI extensions
-            extensions_file = self.config.get_downloads_directory() / 'extensions-arm32-testing.zip'
+            extensions_filename = self.download_filenames['xovi_extensions']
+            extensions_file = self.config.get_downloads_directory() / extensions_filename
             self._log_output(f"Uploading extensions file: {extensions_file}")
             if not self.network_service.upload_file(extensions_file, '/home/root/extensions.zip'):
                 self._log_output("Failed to upload extensions file")
@@ -399,11 +426,12 @@ class InstallationService:
             
             # Upload all required files like Bash script (line 574)
             downloads_dir = self.config.get_downloads_directory()
+            xovi_binary_filename = self.download_filenames['xovi_binary']
             files_to_upload = [
-                ('xovi-arm32.so', 'xovi-arm32.so'),
-                ('appload.so', 'appload.so'),  # From extracted appload-arm32.zip
-                ('qtfb-shim.so', 'qtfb-shim.so'),  # From extracted appload-arm32.zip
-                ('qtfb-shim-32bit.so', 'qtfb-shim-32bit.so')  # From extracted appload-arm32.zip
+                (xovi_binary_filename, xovi_binary_filename),
+                ('appload.so', 'appload.so'),  # From extracted appload package
+                ('qtfb-shim.so', 'qtfb-shim.so'),  # From extracted appload package
+                ('qtfb-shim-32bit.so', 'qtfb-shim-32bit.so')  # From extracted appload package
             ]
             
             for local_file, remote_file in files_to_upload:
@@ -468,7 +496,8 @@ class InstallationService:
             self._log_output(f"Permission setting result: {result6.stdout}")
             
             # Step 6: Install XOVI binary
-            result7 = self.network_service.execute_command("cd /home/root && mv xovi-arm32.so xovi/xovi.so && chmod +x xovi/xovi.so")
+            xovi_binary_filename = self.download_filenames['xovi_binary']
+            result7 = self.network_service.execute_command(f"cd /home/root && mv {xovi_binary_filename} xovi/xovi.so && chmod +x xovi/xovi.so")
             if not result7.success:
                 self._log_output(f"XOVI binary installation failed: {result7.stderr}")
                 return False
@@ -653,19 +682,21 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         
         try:
             # Upload KOReader zip file to device
-            koreader_file = self.config.get_downloads_directory() / 'koreader-remarkable.zip'
-            if not self.network_service.upload_file(koreader_file, '/home/root/koreader-remarkable.zip'):
+            koreader_filename = self.download_filenames['koreader']
+            koreader_file = self.config.get_downloads_directory() / koreader_filename
+            if not self.network_service.upload_file(koreader_file, f'/home/root/{koreader_filename}'):
                 return False
             
             # Extract and install following EXACT Bash script logic (lines 1046-1064)
-            result = self.network_service.execute_command("""
+            koreader_filename = self.download_filenames['koreader']
+            result = self.network_service.execute_command(f"""
                 cd /home/root
                 
                 # Remove old KOReader if it exists (line 1050)
                 rm -rf koreader 2>/dev/null || true
                 
                 # Extract KOReader (line 1053)
-                unzip -q koreader-remarkable.zip
+                unzip -q {koreader_filename}
                 
                 # Create AppLoad directory structure (line 1056)
                 mkdir -p /home/root/xovi/exthome/appload

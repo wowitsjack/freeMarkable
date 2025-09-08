@@ -55,16 +55,6 @@ class DeviceType(Enum):
             "rmpp": cls.RMPP
         }
         return name_mapping.get(name.lower())
-    
-    @classmethod
-    def from_short_name(cls, name: str) -> Optional['DeviceType']:
-        """Get device type from short name (rM1, rM2, rMPP)."""
-        name_mapping = {
-            "rm1": cls.RM1,
-            "rm2": cls.RM2,
-            "rmpp": cls.RMPP
-        }
-        return name_mapping.get(name.lower())
 
 
 class ConnectionStatus(Enum):

@@ -9,16 +9,12 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, TYPE_CHECKING
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 
-
-class DeviceType(Enum):
-    """Supported reMarkable device types."""
-    RM1 = "rM1"
-    RM2 = "rM2"
-    RMPP = "rMPP"  # Future support
+if TYPE_CHECKING:
+    from ..models.device import DeviceType
 
 
 class LogLevel(Enum):
@@ -42,16 +38,101 @@ class NetworkConfig:
 @dataclass
 class DownloadConfig:
     """Download URLs and configuration."""
+    # Default URLs (32-bit ARM for RM1/RM2)
     xovi_extensions_url: str = "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip"
     appload_url: str = "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip"
     xovi_binary_url: str = "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so"
     koreader_url: str = "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
     xovi_tripletap_url: str = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip"
     
+    # Architecture-specific URL mappings
+    _url_mappings: Dict[str, Dict[str, str]] = field(default_factory=lambda: {
+        "arm32": {
+            "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip",
+            "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip",
+            "xovi_binary": "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so",
+            "koreader": "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
+        },
+        "aarch64": {
+            "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip",
+            "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip",
+            "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so",
+            "koreader": "https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip"
+        }
+    })
+    
     # Download settings
     download_timeout: int = 300
     max_retries: int = 3
     chunk_size: int = 8192
+    
+    def get_url_for_architecture(self, component: str, device_type: Optional[Any] = None) -> str:
+        """
+        Get the appropriate URL for a component based on device architecture.
+        
+        Args:
+            component: Component name (xovi_extensions, appload, xovi_binary, koreader)
+            device_type: Device type to determine architecture
+            
+        Returns:
+            URL for the component matching the device architecture
+        """
+        if device_type is None:
+            # Return default URL if no device type specified
+            return getattr(self, f"{component}_url", "")
+        
+        # Determine architecture key
+        if device_type and hasattr(device_type, 'architecture'):
+            # Use the architecture property from DeviceType
+            arch_key = "aarch64" if device_type.architecture == "aarch64" else "arm32"
+        elif device_type and hasattr(device_type, 'value') and device_type.value == "rMPP":
+            arch_key = "aarch64"
+        else:
+            arch_key = "arm32"  # Default to 32-bit ARM for RM1/RM2
+        
+        # Get URL from mapping or fall back to default
+        if arch_key in self._url_mappings and component in self._url_mappings[arch_key]:
+            return self._url_mappings[arch_key][component]
+        
+        # Fallback to default URL
+        return getattr(self, f"{component}_url", "")
+    
+    def get_filename_for_architecture(self, component: str, device_type: Optional[Any] = None) -> str:
+        """
+        Get the appropriate filename for a component based on device architecture.
+        
+        Args:
+            component: Component name (xovi_extensions, appload, xovi_binary, koreader)
+            device_type: Device type to determine architecture
+            
+        Returns:
+            Filename for the component matching the device architecture
+        """
+        is_paper_pro = False
+        if device_type:
+            if hasattr(device_type, 'architecture'):
+                is_paper_pro = device_type.architecture == "aarch64"
+            elif hasattr(device_type, 'value'):
+                is_paper_pro = device_type.value == "rMPP"
+        
+        if not is_paper_pro:
+            # Default 32-bit ARM filenames
+            filename_map = {
+                "xovi_extensions": "extensions-arm32-testing.zip",
+                "appload": "appload-arm32.zip",
+                "xovi_binary": "xovi-arm32.so",
+                "koreader": "koreader-remarkable-v2025.08.zip"
+            }
+        else:
+            # 64-bit aarch64 filenames for Paper Pro
+            filename_map = {
+                "xovi_extensions": "extensions-aarch64.zip",
+                "appload": "appload-aarch64.zip",
+                "xovi_binary": "xovi-aarch64.so",
+                "koreader": "koreader-remarkable-aarch64-v2025.08.zip"
+            }
+        
+        return filename_map.get(component, f"{component}.zip")
 
 
 @dataclass
@@ -109,7 +190,7 @@ class DeviceConfig:
     """Device-specific configuration."""
     ip_address: Optional[str] = None
     ssh_password: Optional[str] = None
-    device_type: Optional[DeviceType] = None
+    device_type: Optional[Any] = None
     
     # Auto-detection settings
     auto_detect_device: bool = True
@@ -153,8 +234,10 @@ class AppConfig:
             
         if env_device_type := os.getenv("REMARKABLE_DEVICE_TYPE"):
             try:
+                # Import DeviceType here to avoid circular imports
+                from ..models.device import DeviceType
                 self.device.device_type = DeviceType(env_device_type.upper())
-            except ValueError:
+            except (ValueError, ImportError):
                 logging.warning(f"Invalid device type in environment: {env_device_type}")
         
         # Application settings from environment  
@@ -303,8 +386,10 @@ class AppConfig:
         # Handle enum conversions
         if device_type_str := config_dict.get('device', {}).get('device_type'):
             try:
+                # Import DeviceType here to avoid circular imports
+                from ..models.device import DeviceType
                 config_dict['device']['device_type'] = DeviceType(device_type_str)
-            except ValueError:
+            except (ValueError, ImportError):
                 logging.warning(f"Invalid device type in config: {device_type_str}")
                 config_dict['device']['device_type'] = None
         
@@ -338,9 +423,9 @@ class AppConfig:
             log_level=config_dict.get('log_level', LogLevel.INFO)
         )
     
-    def update_device_info(self, ip_address: Optional[str] = None, 
+    def update_device_info(self, ip_address: Optional[str] = None,
                           ssh_password: Optional[str] = None,
-                          device_type: Optional[DeviceType] = None) -> None:
+                          device_type: Optional[Any] = None) -> None:
         """
         Update device configuration information.
         
