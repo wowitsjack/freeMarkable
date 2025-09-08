@@ -14,9 +14,9 @@ from typing import Optional, List
 
 # Import core modules
 from remarkable_xovi_installer.config.settings import (
-    init_config, get_config, AppConfig, DeviceType
+    init_config, get_config, AppConfig
 )
-from remarkable_xovi_installer.models.device import Device
+from remarkable_xovi_installer.models.device import Device, DeviceType
 from remarkable_xovi_installer.models.installation_state import InstallationState, InstallationStage
 from remarkable_xovi_installer.utils.logger import setup_logging, get_logger
 from remarkable_xovi_installer.utils.validators import get_validator
