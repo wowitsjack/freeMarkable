@@ -148,6 +148,19 @@ Always ensure you have a recent backup of your reMarkable device before using th
 
 This project is licensed under the terms specified in the LICENSE file.
 
+## Changelog
+
+### v1.0.1 (2024-09-08) - Critical Bugfix Release
+
+**CRITICAL FIX**: Resolved application startup failure
+
+- **Fixed**: ImportError when importing DeviceType from config.settings
+- **Root Cause**: DeviceType was moved to models.device during Paper Pro implementation but main.py import was not updated
+- **Impact**: Application would crash on startup with ImportError, preventing all functionality
+- **Resolution**: Updated main.py to import DeviceType from the correct module location
+
+This bugfix resolves the v1.1.0-alpha startup crash and ensures the application launches successfully with full Paper Pro support.
+
 ---
 
 **Alpha Version Notice**: This software is in active development. Features may change, and stability is not guaranteed. Use only for testing purposes.

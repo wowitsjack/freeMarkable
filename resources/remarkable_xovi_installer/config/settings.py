@@ -210,7 +210,7 @@ class AppConfig:
     device: DeviceConfig = field(default_factory=DeviceConfig)
     
     # Application metadata
-    version: str = "1.0.0"
+    version: str = "1.0.1"
     app_name: str = "freeMarkable"
     config_version: str = "1.0"
     
