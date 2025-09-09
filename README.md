@@ -132,6 +132,14 @@ This application is currently in **ALPHA** status. While it contains the complet
 - User interface refinements still in progress
 - Documentation may be incomplete
 
+## Recent Bug Fixes
+
+**v1.0.5**: Fixed critical bug where AppLoad menu wouldn't appear after full installation
+- **Issue**: XOVI framework was installed but not activated in Stage 1 and Stage 2 installations
+- **Root Cause**: Missing systemd service override creation during installation process
+- **Fix**: Added automatic XOVI activation step to all installation stages
+- **Impact**: AppLoad launcher menu now appears properly after all installation types
+
 ## Contributing
 
 This is an alpha release for testing and feedback purposes. If you encounter issues or have suggestions for improvements, please report them through the project's issue tracker.

@@ -268,7 +268,12 @@ class InstallationService:
             # Step 5: Rebuild hashtable and restart
             if not self._rebuild_hashtable_and_restart():
                 return False
-            self._update_progress(InstallationStage.STAGE_1, 100, "Stage 1 complete - hashtable rebuilt")
+            self._update_progress(InstallationStage.STAGE_1, 90, "Hashtable rebuilt")
+            
+            # Step 6: CRITICAL FIX - Activate XOVI framework
+            if not self._activate_xovi():
+                return False
+            self._update_progress(InstallationStage.STAGE_1, 100, "Stage 1 complete - XOVI activated")
             
             return True
             
@@ -291,10 +296,15 @@ class InstallationService:
                 return False
             self._update_progress(InstallationStage.STAGE_2, 80, "KOReader installed")
             
-            # Step 3: Final configuration (now just cleanup)
+            # Step 3: Final configuration and XOVI activation
             if not self._final_configuration():
                 return False
-            self._update_progress(InstallationStage.STAGE_2, 100, "Stage 2 complete")
+            self._update_progress(InstallationStage.STAGE_2, 90, "Final configuration complete")
+            
+            # Step 4: CRITICAL FIX - Ensure XOVI is activated (in case Stage 2 is run standalone)
+            if not self._activate_xovi():
+                return False
+            self._update_progress(InstallationStage.STAGE_2, 100, "Stage 2 complete - XOVI activated")
             
             return True
             
