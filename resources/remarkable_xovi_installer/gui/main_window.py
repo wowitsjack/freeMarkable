@@ -747,22 +747,17 @@ class MainWindow:
         codexctl_tab.grid_columnconfigure(0, weight=1)
         codexctl_tab.grid_rowconfigure(0, weight=1)
         
-        # Create CodexCtl panel
+        # Create CodexCtl panel - DISABLED by default
         self.codexctl_panel = CodexCtlPanel(
             codexctl_tab,
             progress_callback=self._on_codexctl_progress,
-            status_callback=self._on_codexctl_status
+            status_callback=self._on_codexctl_status,
+            disabled=True  # Panel is locked off by default
         )
         self.codexctl_panel.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         
-        # Connect panel to the already-initialized service
-        try:
-            from ..services.codexctl_service import get_codexctl_service
-            codexctl_service = get_codexctl_service()
-            self.codexctl_panel.set_codexctl_service(codexctl_service)
-            self.logger.info("CodexCtl panel connected to service")
-        except Exception as e:
-            self.logger.error(f"Failed to connect CodexCtl panel to service: {e}")
+        # Don't connect to service when disabled
+        self.logger.info("CodexCtl panel initialized in disabled state")
     
     def _setup_settings_tab(self) -> None:
         """Setup settings tab content."""
@@ -2221,6 +2216,30 @@ SUPPORT:
         """Handle CodexCtl status updates."""
         # Update main status bar
         self._update_status(f"CodexCtl: {status}")
+    
+    def toggle_codexctl_panel(self, enabled: bool = None) -> None:
+        """Enable or disable the CodexCtl panel."""
+        if not self.codexctl_panel:
+            return
+        
+        if enabled is None:
+            # Toggle current state
+            enabled = self.codexctl_panel.is_disabled()
+        
+        self.codexctl_panel.set_disabled(not enabled)
+        
+        # Connect to service if enabling
+        if enabled and not self.codexctl_panel.is_disabled():
+            try:
+                from ..services.codexctl_service import get_codexctl_service
+                codexctl_service = get_codexctl_service()
+                self.codexctl_panel.set_codexctl_service(codexctl_service)
+                self.logger.info("CodexCtl panel connected to service")
+            except Exception as e:
+                self.logger.error(f"Failed to connect CodexCtl panel to service: {e}")
+        
+        status = "enabled" if enabled else "disabled"
+        self.logger.info(f"CodexCtl panel {status}")
     
     def _fix_ethernet(self) -> None:
         """Fix USB ethernet adapter connectivity."""

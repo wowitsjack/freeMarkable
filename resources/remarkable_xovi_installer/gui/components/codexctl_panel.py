@@ -36,9 +36,10 @@ class CodexCtlPanel(ctk.CTkFrame):
     - Error handling and user feedback
     """
     
-    def __init__(self, parent, 
+    def __init__(self, parent,
                  progress_callback: Optional[Callable[[CodexCtlProgress], None]] = None,
                  status_callback: Optional[Callable[[str], None]] = None,
+                 disabled: bool = False,
                  **kwargs):
         """
         Initialize CodexCtl panel.
@@ -47,9 +48,13 @@ class CodexCtlPanel(ctk.CTkFrame):
             parent: Parent widget
             progress_callback: Callback for progress updates
             status_callback: Callback for status messages
+            disabled: Whether the panel should be disabled/locked
             **kwargs: Additional CTkFrame arguments
         """
         super().__init__(parent, **kwargs)
+        
+        # Panel state
+        self.is_panel_disabled = disabled
         
         # Callbacks
         self.progress_callback = progress_callback
@@ -83,6 +88,11 @@ class CodexCtlPanel(ctk.CTkFrame):
         self.loading_overlay = None
         self.spinner_angle = 0
         self.spinner_job = None
+        
+        # Check if panel is disabled
+        if self.is_panel_disabled:
+            self._create_disabled_ui()
+            return
         
         # Check Python version compatibility
         if not self._check_python_version():
@@ -971,6 +981,52 @@ class CodexCtlPanel(ctk.CTkFrame):
             self.logger.error(f"Error checking Python version: {e}")
             return False
     
+    def _create_disabled_ui(self) -> None:
+        """Create disabled UI when panel is locked off."""
+        # Clear any existing content
+        for widget in self.winfo_children():
+            widget.destroy()
+        
+        # Configure grid
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        # Disabled frame
+        disabled_frame = ctk.CTkFrame(self)
+        disabled_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        disabled_frame.grid_columnconfigure(0, weight=1)
+        
+        # Disabled icon and title
+        ctk.CTkLabel(
+            disabled_frame,
+            text="🔒 CodexCtl Panel Disabled",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="orange"
+        ).grid(row=0, column=0, pady=(20, 10))
+        
+        # Disabled message
+        message_text = (
+            "The CodexCtl firmware management panel is currently\n"
+            "locked off while it undergoes a complete rewrite.\n\n"
+            "Firmware operations are temporarily unavailable.\n"
+            "All other freeMarkable features remain fully functional."
+        )
+        
+        ctk.CTkLabel(
+            disabled_frame,
+            text=message_text,
+            font=ctk.CTkFont(size=12),
+            justify="center"
+        ).grid(row=1, column=0, pady=(15, 20))
+        
+        # Status message
+        ctk.CTkLabel(
+            disabled_frame,
+            text="This panel will be restored once the rewrite is completed.",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).grid(row=2, column=0, pady=(0, 20))
+
     def _create_version_error_ui(self) -> None:
         """Create error UI for Python version incompatibility."""
         # Clear any existing content
@@ -1032,6 +1088,30 @@ class CodexCtlPanel(ctk.CTkFrame):
             font=ctk.CTkFont(size=11),
             text_color="gray"
         ).grid(row=4, column=0, pady=(0, 20))
+
+    def set_disabled(self, disabled: bool) -> None:
+        """Enable or disable the panel dynamically."""
+        if self.is_panel_disabled == disabled:
+            return  # No change needed
+        
+        self.is_panel_disabled = disabled
+        
+        if disabled:
+            self._create_disabled_ui()
+            self.logger.info("CodexCtl panel has been disabled")
+        else:
+            # Re-enable the panel
+            if not self._check_python_version():
+                self._create_version_error_ui()
+            else:
+                self._setup_ui()
+                self._show_loading_overlay()
+                self._initialize_service()
+            self.logger.info("CodexCtl panel has been enabled")
+
+    def is_disabled(self) -> bool:
+        """Check if the panel is currently disabled."""
+        return self.is_panel_disabled
 
     def cleanup(self) -> None:
         """Cleanup panel resources."""
