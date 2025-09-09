@@ -189,6 +189,10 @@ class BackupService:
         finally:
             self.current_operation = None
             self.current_backup_name = None
+            
+            # Prune old backups after successful creation
+            if 'backup_info' in locals():
+                self._prune_old_backups()
     
     def _generate_backup_script(self, backup_name: str, device_type: str, device_ip: str,
                                custom_components: Optional[List[str]] = None) -> str:
@@ -493,23 +497,23 @@ echo 'Backup creation completed successfully'
         
         self._log_output("Listing available backups...")
         
-        # Find backup directories
+        # Find backup directories - simplified for BusyBox compatibility
         result = self.network_service.execute_command(
-            "ls -1d /home/root/koreader_backup_* 2>/dev/null | xargs -I {} basename {} || echo 'No backups found'"
+            "cd /home/root && ls -1d koreader_backup_* 2>/dev/null || echo 'No backups found'"
         )
         
         if not result.success or "No backups found" in result.stdout:
             self._log_output("No backups found on device")
             return []
         
-        backup_names = [name.strip() for name in result.stdout.split('\n') if name.strip() and 'koreader_backup_' in name]
+        backup_names = [name.strip() for name in result.stdout.split('\n') if name.strip() and 'koreader_backup_' in name and name != 'No backups found']
         backups = []
         
         for backup_name in backup_names:
             try:
-                # Extract basic info for each backup
+                # Extract basic info for each backup - BusyBox compatible
                 info_result = self.network_service.execute_command(
-                    f"cat /home/root/{backup_name}/backup_info.txt 2>/dev/null | head -10"
+                    f"cat /home/root/{backup_name}/backup_info.txt 2>/dev/null | head -n 10"
                 )
                 
                 if info_result.success:
@@ -664,6 +668,101 @@ echo 'Backup creation completed successfully'
             self._log_output(f"Failed to delete backup: {delete_result.stderr}")
             return False
     
+    def prune_backups(self, keep_count: int = 3) -> tuple:
+        """
+        Prune old backups, keeping only a specified number of recent backups.
+        This is the public method that can be called manually via a button.
+        Also cleans up scattered backup files and obsolete shims.
+        
+        Args:
+            keep_count: The number of recent backups to keep (default: 3)
+            
+        Returns:
+            Tuple of (deleted_count, kept_count)
+        """
+        deleted_count = self._prune_old_backups(keep_count, is_manual=True)
+        
+        # Clean up scattered backup files
+        scattered_count = self._cleanup_scattered_backup_files()
+        deleted_count += scattered_count
+        
+        # Get current backup count after pruning
+        try:
+            current_backups = self.list_backups()
+            kept_count = len(current_backups)
+        except Exception:
+            kept_count = keep_count  # Fallback estimate
+        
+        return (deleted_count, kept_count)
+    
+    def _prune_old_backups(self, keep_count: int = 3, is_manual: bool = False) -> int:
+        """
+        Prune old backups, keeping only a specified number of recent backups.
+        
+        Args:
+            keep_count: The number of recent backups to keep (default: 3)
+            is_manual: Whether this is a manual pruning operation
+            
+        Returns:
+            Number of backups that were deleted
+        """
+        operation_type = "Manual backup pruning" if is_manual else "Automatic backup pruning"
+        self._log_output(f"{operation_type}: Checking for old backups to prune...")
+        
+        deleted_count = 0
+        
+        try:
+            # Get all existing backups
+            backups = self.list_backups()
+            
+            if len(backups) <= keep_count:
+                self._log_output(f"Found {len(backups)} backups, which is within the limit of {keep_count}")
+                return deleted_count
+            
+            self._log_output(f"Found {len(backups)} backups, need to prune {len(backups) - keep_count} old ones")
+            
+            # Sort backups by timestamp (extract from backup name)
+            # Backup names are in format: koreader_backup_<timestamp>
+            def get_timestamp(backup_info):
+                try:
+                    # Extract timestamp from backup name
+                    parts = backup_info.name.split('_')
+                    if len(parts) >= 3 and parts[-1].isdigit():
+                        return int(parts[-1])
+                    else:
+                        # Fallback to created_at if timestamp extraction fails
+                        return int(backup_info.created_at.timestamp())
+                except (ValueError, AttributeError):
+                    # Fallback timestamp if all else fails
+                    return 0
+            
+            # Sort backups by timestamp (oldest first)
+            sorted_backups = sorted(backups, key=get_timestamp)
+            
+            # Calculate how many to delete
+            num_to_delete = len(sorted_backups) - keep_count
+            backups_to_delete = sorted_backups[:num_to_delete]
+            
+            # Delete old backups
+            for backup_info in backups_to_delete:
+                self._log_output(f"Deleting old backup: {backup_info.name}")
+                success = self.delete_backup(backup_info.name)
+                if success:
+                    self._log_output(f"Successfully deleted old backup: {backup_info.name}")
+                    deleted_count += 1
+                else:
+                    self._log_output(f"Warning: Failed to delete old backup: {backup_info.name}")
+            
+            self._log_output(f"Backup pruning completed. Deleted {deleted_count} backups, keeping {keep_count} most recent backups.")
+            return deleted_count
+            
+        except Exception as e:
+            self._log_output(f"Warning: Backup pruning failed: {e}")
+            if is_manual:
+                raise Exception(f"Manual backup pruning failed: {e}")
+            # For automatic pruning, don't raise the exception - pruning failure shouldn't stop backup creation
+            return deleted_count
+    
     def get_backup_details(self, backup_name: str) -> Optional[Dict[str, Any]]:
         """
         Get detailed information about a specific backup.
@@ -718,9 +817,9 @@ echo 'Backup creation completed successfully'
                     key, value = line.split('=', 1)
                     details["metadata"][key] = value
         
-        # List backup files
+        # List backup files - BusyBox compatible
         files_result = self.network_service.execute_command(
-            f"find /home/root/{backup_name} -type f | head -20"
+            f"find /home/root/{backup_name} -type f | head -n 20"
         )
         if files_result.success:
             details["files"] = [
@@ -729,6 +828,49 @@ echo 'Backup creation completed successfully'
             ]
         
         return details
+    
+    def _cleanup_scattered_backup_files(self) -> int:
+        """
+        Clean up ONLY scattered backup-related files that are clearly safe to remove.
+        Does NOT remove any .so files or active system components.
+        
+        Returns:
+            Number of scattered files deleted
+        """
+        self._log_output("Cleaning up scattered backup files (log files only)...")
+        deleted_count = 0
+        
+        try:
+            # ONLY clean up log files that are clearly backup-related
+            # DO NOT remove .so files, shims, or any active system components
+            backup_log_files = [
+                "/home/root/system_backup_log.txt",
+                "/home/root/recovery_log.txt",
+                "/tmp/backups.list"
+            ]
+            
+            # Clean up only backup log files
+            for file_path in backup_log_files:
+                result = self.network_service.execute_command(
+                    f"test -f {file_path} && rm -f {file_path} && echo 'deleted' || echo 'not found'"
+                )
+                if result.success and "deleted" in result.stdout:
+                    self._log_output(f"Removed backup log file: {file_path}")
+                    deleted_count += 1
+            
+            # DO NOT touch .so files or shims - they are needed for the system
+            self._log_output("NOTE: Preserving all .so files and shims as they are needed for system operation")
+            
+            if deleted_count > 0:
+                self._log_output(f"Safe backup cleanup completed: {deleted_count} log files removed")
+            else:
+                self._log_output("No scattered backup log files found to clean up")
+                
+            return deleted_count
+            
+        except Exception as e:
+            self._log_output(f"Warning: Failed to clean up scattered backup files: {e}")
+            return 0
 
 
 # Global backup service instance
@@ -788,3 +930,8 @@ def restore_from_backup(backup_name: str, **kwargs) -> bool:
 def delete_backup(backup_name: str) -> bool:
     """Delete backup (convenience function)."""
     return get_backup_service().delete_backup(backup_name)
+
+
+def prune_backups(keep_count: int = 3) -> int:
+    """Prune old backups (convenience function)."""
+    return get_backup_service().prune_backups(keep_count)

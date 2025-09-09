@@ -491,6 +491,17 @@ class MainWindow:
             hover_color="#6b1c28"
         )
         self.delete_backup_button.pack(side="left", padx=5)
+        
+        self.prune_backups_button = ctk.CTkButton(
+            backup_controls_frame,
+            text="Prune Backups (Keep 3)",
+            command=lambda: self._prune_backups(),
+            width=150,
+            height=35,
+            fg_color="orange",
+            hover_color="#cc8800"
+        )
+        self.prune_backups_button.pack(side="left", padx=5)
     
     def _setup_status_tab(self) -> None:
         """Setup device status tab content."""
@@ -1121,6 +1132,10 @@ class MainWindow:
             self.list_backups_button.configure(state="normal" if connected else "disabled")
         if hasattr(self, 'delete_backup_button'):
             self.delete_backup_button.configure(state="normal" if connected else "disabled")
+        if hasattr(self, 'prune_backups_button'):
+            self.prune_backups_button.configure(state="normal" if connected else "disabled")
+        if hasattr(self, 'prune_backups_button'):
+            self.prune_backups_button.configure(state="normal" if connected else "disabled")
         
         # Status refresh button
         if hasattr(self, 'refresh_button'):
@@ -1981,6 +1996,90 @@ SUPPORT:
         
         threading.Thread(target=run_delete, daemon=True).start()
         self._update_status(f"Deleting backup: {backup_name}")
+    
+    def _prune_backups(self, **kwargs) -> None:
+        """Prune old backups, keeping only the most recent 3."""
+        if not self.device or not self.device.is_connected():
+            self._update_status("Device not connected for backup pruning")
+            return
+        
+        # Show confirmation dialog first
+        def show_prune_confirmation():
+            dialog = ctk.CTkToplevel(self.root)
+            dialog.title("Confirm Backup Pruning")
+            dialog.geometry("450x300")
+            dialog.resizable(False, False)
+            
+            # Center the dialog
+            dialog.update_idletasks()
+            x = (dialog.winfo_screenwidth() // 2) - (450 // 2)
+            y = (dialog.winfo_screenheight() // 2) - (300 // 2)
+            dialog.geometry(f"450x300+{x}+{y}")
+            
+            # Make it modal
+            dialog.transient(self.root)
+            dialog.grab_set()
+            
+            content_frame = ctk.CTkFrame(dialog)
+            content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
+            title_label = ctk.CTkLabel(
+                content_frame,
+                text="Prune Old Backups",
+                font=ctk.CTkFont(size=16, weight="bold"),
+                text_color="orange"
+            )
+            title_label.pack(pady=(0, 15))
+            
+            warning_text = ctk.CTkLabel(
+                content_frame,
+                text="This will automatically delete old backup files,\nkeeping only the 3 most recent backups.\n\nThis action will:\n• Free up storage space on your device\n• Remove older backups permanently\n• Keep the 3 newest backups safe\n\nDeleted backups cannot be recovered.",
+                font=ctk.CTkFont(size=12),
+                justify="center"
+            )
+            warning_text.pack(pady=(0, 20))
+            
+            button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+            button_frame.pack(fill="x")
+            
+            def proceed_prune():
+                dialog.destroy()
+                self._execute_prune_backups()
+            
+            ctk.CTkButton(
+                button_frame,
+                text="Prune Backups",
+                command=proceed_prune,
+                fg_color="orange",
+                hover_color="#cc8800"
+            ).pack(side="right", padx=(5, 0))
+            ctk.CTkButton(button_frame, text="Cancel", command=dialog.destroy).pack(side="right")
+        
+        show_prune_confirmation()
+    
+    def _execute_prune_backups(self):
+        """Execute backup pruning operation."""
+        self.logger.info("Starting backup pruning...")
+        self._update_status("Pruning old backups...")
+        
+        def run_prune():
+            try:
+                from ..services.backup_service import get_backup_service
+                backup_service = get_backup_service()
+                
+                # Call the prune_backups method from the service
+                deleted_count, kept_count = backup_service.prune_backups()
+                
+                success_msg = f"Pruning completed: {deleted_count} old backups deleted, {kept_count} backups kept"
+                self.root.after(0, lambda: self._update_status(success_msg))
+                self.root.after(0, lambda: self.logger.info(success_msg))
+                
+            except Exception as e:
+                error_msg = str(e)  # Capture the error message
+                self.logger.error(f"Backup pruning failed: {error_msg}")
+                self.root.after(0, lambda msg=error_msg: self._update_status(f"Backup pruning failed: {msg}"))
+        
+        threading.Thread(target=run_prune, daemon=True).start()
 
     # Auto-connect wrapper methods for seamless UX
     
