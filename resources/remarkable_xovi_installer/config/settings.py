@@ -291,19 +291,9 @@ class AppConfig:
     
     def get_config_dir(self) -> Path:
         """Get the application configuration directory."""
-        try:
-            from ..utils.windows_compat import get_platform_config_dir
-            config_dir = get_platform_config_dir('remarkable-xovi-installer')
-        except ImportError:
-            # Fallback if windows_compat is not available
-            if os.name == 'nt':  # Windows
-                config_dir = Path(os.getenv('APPDATA', '')) / 'remarkable-xovi-installer'
-            else:  # Unix-like systems
-                config_dir = Path.home() / '.config' / 'remarkable-xovi-installer'
-            
-            config_dir.mkdir(parents=True, exist_ok=True)
-        
-        return config_dir
+        # Use the new platform-agnostic utility to get the config directory
+        from ..utils.platform_utils import get_platform_config_dir
+        return get_platform_config_dir('remarkable-xovi-installer')
     
     def get_config_file_path(self) -> Path:
         """Get the path to the configuration file."""

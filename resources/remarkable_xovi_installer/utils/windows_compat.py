@@ -329,45 +329,6 @@ def create_windows_shortcut(target_path: str, shortcut_path: str,
 
 # Utility functions for cross-platform compatibility
 
-def get_platform_config_dir(app_name: str) -> Path:
-    """Get platform-appropriate configuration directory."""
-    if is_windows():
-        config_dir = Path(os.getenv('APPDATA', '')) / app_name
-    elif sys.platform == 'darwin':  # macOS
-        config_dir = Path.home() / 'Library' / 'Application Support' / app_name
-    else:  # Linux and other Unix-like
-        config_dir = Path.home() / '.config' / app_name
-    
-    config_dir.mkdir(parents=True, exist_ok=True)
-    return config_dir
-
-
-def get_platform_cache_dir(app_name: str) -> Path:
-    """Get platform-appropriate cache directory."""
-    if is_windows():
-        cache_dir = Path(os.getenv('LOCALAPPDATA', '')) / app_name / 'Cache'
-    elif sys.platform == 'darwin':  # macOS
-        cache_dir = Path.home() / 'Library' / 'Caches' / app_name
-    else:  # Linux and other Unix-like
-        cache_dir = Path.home() / '.cache' / app_name
-    
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    return cache_dir
-
-
-def get_platform_log_dir(app_name: str) -> Path:
-    """Get platform-appropriate log directory."""
-    if is_windows():
-        log_dir = Path(os.getenv('LOCALAPPDATA', '')) / app_name / 'Logs'
-    elif sys.platform == 'darwin':  # macOS
-        log_dir = Path.home() / 'Library' / 'Logs' / app_name
-    else:  # Linux and other Unix-like
-        log_dir = Path.home() / '.local' / 'share' / app_name / 'logs'
-    
-    log_dir.mkdir(parents=True, exist_ok=True)
-    return log_dir
-
-
 # Testing function
 def test_windows_compatibility() -> Dict[str, Any]:
     """Test Windows compatibility and return results."""

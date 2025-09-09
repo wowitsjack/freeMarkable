@@ -270,10 +270,8 @@ class InstallationService:
                 return False
             self._update_progress(InstallationStage.STAGE_1, 90, "Hashtable rebuilt")
             
-            # Step 6: CRITICAL FIX - Activate XOVI framework
-            if not self._activate_xovi():
-                return False
-            self._update_progress(InstallationStage.STAGE_1, 100, "Stage 1 complete - XOVI activated")
+            # Note: XOVI activation will be done at the very end of the complete installation
+            self._update_progress(InstallationStage.STAGE_1, 100, "Stage 1 complete - XOVI framework ready")
             
             return True
             
@@ -553,7 +551,8 @@ END
 systemctl daemon-reload
 systemctl restart xochitl'''
             
-            result7a = self.network_service.execute_command(f"cd /home/root && cat > xovi/start << 'START_EOF'\\n{start_script_content}\\nSTART_EOF")
+            # Create start script using a safer method - avoid heredoc embedding issues
+            result7a = self.network_service.execute_command(f"cd /home/root && echo \"{start_script_content}\" > xovi/start")
             if not result7a.success:
                 self._log_output(f"Start script creation failed: {result7a.stderr}")
                 return False
@@ -572,7 +571,7 @@ rmdir /etc/systemd/system/xochitl.service.d 2>/dev/null || true
 systemctl daemon-reload
 systemctl restart xochitl'''
             
-            result7c = self.network_service.execute_command(f"cd /home/root && cat > xovi/stop << 'STOP_EOF'\\n{stop_script_content}\\nSTOP_EOF")
+            result7c = self.network_service.execute_command(f"cd /home/root && echo \"{stop_script_content}\" > xovi/stop")
             if not result7c.success:
                 self._log_output(f"Stop script creation failed: {result7c.stderr}")
                 return False
@@ -773,32 +772,12 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         # This command sequence is taken directly from the Bash script's 'start' function
         # It's the core mechanism for injecting XOVI into the reMarkable UI
         
-        xovi_activation_script = '''
-            echo '--> Creating tmpfs overlay for xochitl service...'
-            mkdir -p /etc/systemd/system/xochitl.service.d
-            
-            echo '--> Mounting tmpfs to enable service override...'
-            mount -t tmpfs tmpfs /etc/systemd/system/xochitl.service.d
-            
-            echo '--> Writing xovi.conf override...'
-            cat << END > /etc/systemd/system/xochitl.service.d/xovi.conf
-[Service]
-Environment="QML_DISABLE_DISK_CACHE=1"
-Environment="QML_XHR_ALLOW_FILE_WRITE=1"
-Environment="QML_XHR_ALLOW_FILE_READ=1"
-Environment="LD_PRELOAD=/home/root/xovi/xovi.so"
-END
-
-            echo '--> Reloading systemd daemon...'
-            systemctl daemon-reload
-            
-            echo '--> Restarting xochitl service with XOVI injected...'
-            systemctl restart xochitl
-            
-            echo '--> XOVI activation complete.'
-        '''
+        # This command sequence is taken directly from the Bash script's 'start' function
+        # It's the core mechanism for injecting XOVI into the reMarkable UI
+        self._log_output("Activating XOVI via tmpfs service override...")
         
-        result = self.network_service.execute_command(xovi_activation_script)
+        # Use the start script we just created to ensure consistency
+        result = self.network_service.execute_command("cd /home/root/xovi && ./start")
         
         if not result.success:
             self._log_output(f"CRITICAL: Failed to activate XOVI: {result.stderr}")
