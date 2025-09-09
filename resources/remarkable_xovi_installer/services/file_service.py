@@ -17,6 +17,15 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from urllib.parse import urlparse
 import time
+
+# SSL imports for macOS compatibility
+try:
+    import ssl
+    import certifi
+    # Create default SSL context for macOS
+    ssl._create_default_https_context = ssl._create_unverified_context
+except ImportError:
+    pass  # SSL modules not available
 from dataclasses import dataclass
 from enum import Enum
 

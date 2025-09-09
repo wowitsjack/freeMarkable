@@ -505,7 +505,7 @@ class Device:
             appload_installed = appload_check.success and 'exists' in appload_check.stdout
             
             # Check for KOReader installation
-            koreader_check = network_service.execute_command("test -f /home/root/xovi/exthome/appload/koreader.so && echo 'exists' || echo 'missing'")
+            koreader_check = network_service.execute_command("test -d /home/root/xovi/exthome/appload/koreader && echo 'exists' || echo 'missing'")
             koreader_installed = koreader_check.success and 'exists' in koreader_check.stdout
             
             # Check for xovi-tripletap

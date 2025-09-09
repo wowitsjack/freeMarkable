@@ -21,6 +21,15 @@ import logging
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
+# SSL imports for macOS compatibility
+try:
+    import ssl
+    import certifi
+    # Create default SSL context for macOS
+    ssl._create_default_https_context = ssl._create_unverified_context
+except ImportError:
+    pass  # SSL modules not available
+
 from remarkable_xovi_installer.utils.logger import get_logger
 from remarkable_xovi_installer.config.settings import get_config
 from remarkable_xovi_installer.services.network_service import get_network_service

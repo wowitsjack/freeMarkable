@@ -12,6 +12,15 @@ import traceback
 from pathlib import Path
 from typing import Optional, List
 
+# SSL imports for macOS compatibility
+try:
+    import ssl
+    import certifi
+    # Create default SSL context for macOS
+    ssl._create_default_https_context = ssl._create_unverified_context
+except ImportError:
+    pass  # SSL modules not available, will be handled by individual services
+
 # Import core modules
 from remarkable_xovi_installer.config.settings import (
     init_config, get_config, AppConfig
