@@ -137,3 +137,5 @@ device_settings.json
 logs/
 temp/
 *.tmp
+*.zip
+freeMarkable-*.zip
