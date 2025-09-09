@@ -2,19 +2,10 @@
 
 ## Major Updates
 
-### Production Ready Status
-- **REMOVED**: All alpha/beta language from documentation
-- **UPDATED**: README now presents freeMarkable as production-ready software
-- **REFINED**: Documentation language to be direct and technical without marketing buzzwords
-
 ### macOS Support Enhancement
 - **NEW**: Added launch.command file for macOS users
 - **IMPROVED**: Double-click launcher support on macOS systems
 - **ENHANCED**: Cross-platform compatibility for all major operating systems
-
-### Documentation Cleanup
-- **REMOVED**: All emoji from README.md for professional presentation
-- **FOCUSED**: Clear, technical documentation without unnecessary promotional content
 
 ## Installation Instructions
 
