@@ -2,13 +2,9 @@
 
 ![freeMarkable Interface](image.png)
 
-**ALPHA VERSION - NOT READY FOR PUBLIC USE**
+**Python GUI for installing XOVI on reMarkable devices**
 
-This is an alpha version of freeMarkable and is currently under development. It is not recommended for general use and may contain bugs or incomplete features. Use at your own risk and only for testing purposes.
-
----
-
-Modern Python GUI application for installing XOVI+AppLoader on **all reMarkable devices**, including the new **reMarkable Paper Pro**. This is a complete transformation from the original bash script into a user-friendly graphical interface with automatic architecture detection.
+Python GUI application for installing XOVI+AppLoad on **all reMarkable devices**, including the new **reMarkable Paper Pro**. Features automatic device detection, graphical interface, and backup system for safe installations.
 
 ## NEW: reMarkable Paper Pro Support
 
@@ -23,15 +19,15 @@ Modern Python GUI application for installing XOVI+AppLoader on **all reMarkable 
 
 | Device | Architecture | Binary Type | Status |
 |--------|-------------|-------------|---------|
-| **reMarkable 1** | armv6l | 32-bit ARM | ✅ Fully Supported |
-| **reMarkable 2** | armv7l/armhf | 32-bit ARM | ✅ Fully Supported |
-| **reMarkable Paper Pro** | aarch64/arm64 | 64-bit ARM | ✅ Fully Supported |
+| **reMarkable 1** | armv6l | 32-bit ARM |  Fully Supported |
+| **reMarkable 2** | armv7l/armhf | 32-bit ARM |  Fully Supported |
+| **reMarkable Paper Pro** | aarch64/arm64 | 64-bit ARM |  Fully Supported |
 
 ## Features
 
 - **Universal Device Support** - Works with reMarkable 1, 2, and Paper Pro
 - **Smart Architecture Detection** - Automatically detects device type and uses appropriate binaries
-- **Modern GUI Interface** - Built with CustomTkinter for cross-platform compatibility
+- **GUI Interface** - Built with CustomTkinter for cross-platform compatibility
 - **Complete XOVI Installation** - Full framework with proper tmpfs overlay activation
 - **AppLoad Integration** - Application launcher system for reMarkable devices
 - **KOReader Installation** - Popular eBook reader with full integration
@@ -43,7 +39,7 @@ Modern Python GUI application for installing XOVI+AppLoader on **all reMarkable 
 
 ## System Requirements
 
-- **Python 3.6 or higher** installed on your system
+- **Python 3.10 or higher** installed on your system
 - **reMarkable device** (any generation: 1, 2, or Paper Pro) with SSH access enabled
 - **USB or WiFi connection** to your reMarkable device
 - **Internet connection** for downloading required components
@@ -122,35 +118,44 @@ freeMarkable/
         └── config/        # Application configuration
 ```
 
-## Development Status
+## Ready for Use
 
-This application is currently in **ALPHA** status. While it contains the complete functionality of the original bash script plus new Paper Pro support, it has not undergone extensive real-world testing. Known limitations include:
+freeMarkable supports all reMarkable devices with reliable installations. Features include:
 
-- Limited testing on various system configurations
-- Paper Pro support is newly implemented and needs real-world validation
-- Potential edge cases in error handling
-- User interface refinements still in progress
-- Documentation may be incomplete
+- **Tested Installation Process** - Successful XOVI installations across device types
+- **Device Coverage** - Full support for all reMarkable generations including Paper Pro
+- **Error Handling** - Backup and recovery systems
+- **Cross-platform** - Works on Linux, Windows, and macOS
+- **Active Development** - Regular updates with bug fixes and improvements
 
-## Recent Bug Fixes
+## Recent Updates
 
-**v1.0.5**: Fixed critical bug where AppLoad menu wouldn't appear after full installation
-- **Issue**: XOVI framework was installed but not activated in Stage 1 and Stage 2 installations
-- **Root Cause**: Missing systemd service override creation during installation process
-- **Fix**: Added automatic XOVI activation step to all installation stages
-- **Impact**: AppLoad launcher menu now appears properly after all installation types
+**v1.0.9**: Major reliability improvements and cross-platform fixes
+- **KOReader Detection Fix**: Resolved detection issues for proper installation status reporting
+- **macOS SSL Support**: Added SSL compatibility for seamless macOS operation
+- **Enhanced Stability**: Improved error handling and connection reliability
+
+**v1.0.8**: CodexCtl panel lockout during rewrite phase
+- **UI Updates**: Clean interface messaging during system updates
+- **Backup System**: Enhanced pruning and management features
 
 ## Contributing
 
-This is an alpha release for testing and feedback purposes. If you encounter issues or have suggestions for improvements, please report them through the project's issue tracker.
+freeMarkable welcomes contributions from the community. If you encounter issues or have suggestions for improvements, please report them through the project's issue tracker.
 
-**Paper Pro Testing Needed:** If you have access to a reMarkable Paper Pro, your testing and feedback would be especially valuable!
+We especially appreciate feedback from users across all reMarkable device generations to ensure continued compatibility and performance.
 
-## Disclaimer
+## Safety & Backups
 
-This software modifies your reMarkable device. While every effort has been made to ensure safety through automatic backups and proper error handling, use this software at your own risk. The developers are not responsible for any damage to your device.
+freeMarkable includes backup systems for device safety. The application automatically creates device backups before any modifications, allowing you to restore your device to its original state.
 
-Always ensure you have a recent backup of your reMarkable device before using this software.
+**Safety Features:**
+- **Automatic Backups**: Created before every installation
+- **Backup Management**: Easily manage and restore from previous backups
+- **Reversible Installation**: Complete uninstall option available
+- **Error Recovery**: Error handling with safe fallback options
+
+Always ensure your reMarkable device is adequately charged during installation processes.
 
 ## License
 
@@ -158,4 +163,4 @@ This project is licensed under the terms specified in the LICENSE file.
 
 ---
 
-**Alpha Version Notice**: This software is in active development. Features may change, and stability is not guaranteed. Use only for testing purposes.
+**freeMarkable** - XOVI installation made simple and safe for all reMarkable devices.
