@@ -25,6 +25,7 @@ from .components.device_panel import DevicePanel
 from .components.menu_panel import MenuPanel
 from .components.progress_panel import ProgressPanel
 from .components.log_panel import LogPanel
+from .components.codexctl_panel import CodexCtlPanel
 from .wizards.setup_wizard import SetupWizard
 
 
@@ -73,6 +74,7 @@ class MainWindow:
         self.menu_panel: Optional[MenuPanel] = None
         self.progress_panel: Optional[ProgressPanel] = None
         self.log_panel: Optional[LogPanel] = None
+        self.codexctl_panel: Optional[CodexCtlPanel] = None
         self.setup_wizard: Optional[SetupWizard] = None
         
         # Tabbed interface
@@ -131,6 +133,9 @@ class MainWindow:
                     timeout=self.config.downloads.download_timeout,
                     max_retries=self.config.downloads.max_retries
                 )
+        
+        # Initialize CodexCtl service
+        self._initialize_codexctl_service()
         
         # Get validator
         self.validator = get_validator()
@@ -212,12 +217,14 @@ class MainWindow:
         self.tabview.add("Install & Monitor")  # Main tab for beginners
         self.tabview.add("Advanced Backup")   # Advanced backup operations
         self.tabview.add("Device Status")      # Advanced device information
+        self.tabview.add("CodexCtl")           # Firmware management
         self.tabview.add("Settings")            # Advanced settings
         
         # Setup tab content
         self._setup_main_tab()           # Combined install + progress + logs
         self._setup_backup_tab()         # Advanced backup operations
         self._setup_status_tab()         # Device status information
+        self._setup_codexctl_tab()       # Firmware management
         self._setup_settings_tab()       # Application settings
     
     def _create_connection_header(self) -> None:
@@ -722,6 +729,29 @@ class MainWindow:
             fg_color="gray",
             hover_color="#606060"
         ).pack(side="right")
+    
+    def _setup_codexctl_tab(self) -> None:
+        """Setup CodexCtl firmware management tab content."""
+        codexctl_tab = self.tabview.tab("CodexCtl")
+        codexctl_tab.grid_columnconfigure(0, weight=1)
+        codexctl_tab.grid_rowconfigure(0, weight=1)
+        
+        # Create CodexCtl panel
+        self.codexctl_panel = CodexCtlPanel(
+            codexctl_tab,
+            progress_callback=self._on_codexctl_progress,
+            status_callback=self._on_codexctl_status
+        )
+        self.codexctl_panel.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Connect panel to the already-initialized service
+        try:
+            from ..services.codexctl_service import get_codexctl_service
+            codexctl_service = get_codexctl_service()
+            self.codexctl_panel.set_codexctl_service(codexctl_service)
+            self.logger.info("CodexCtl panel connected to service")
+        except Exception as e:
+            self.logger.error(f"Failed to connect CodexCtl panel to service: {e}")
     
     def _setup_settings_tab(self) -> None:
         """Setup settings tab content."""
@@ -2058,6 +2088,67 @@ SUPPORT:
         except Exception as e:
             self.logger.error(f"Failed to reset app state: {e}")
             self._update_status("App state reset encountered errors")
+    
+    def _initialize_codexctl_service(self) -> None:
+        """Get existing CodexCtl service (don't create a new one)."""
+        try:
+            from ..services.codexctl_service import get_codexctl_service
+            
+            # Just get the existing service initialized by main.py
+            # Don't create a new one to avoid duplicate downloads
+            codexctl_service = get_codexctl_service()
+            
+            self.logger.info("CodexCtl service connected")
+            
+            # Note: Panel connection will be done later in _setup_codexctl_tab()
+            # when the panel is actually created
+                
+        except RuntimeError:
+            # Service not initialized yet by main app
+            self.logger.debug("CodexCtl service not yet initialized by main app")
+        except Exception as e:
+            self.logger.error(f"Failed to connect to CodexCtl service: {e}")
+    
+    def _on_codexctl_progress(self, progress) -> None:
+        """Handle CodexCtl progress updates."""
+        # Forward progress to main progress panel if desired
+        if self.progress_panel and hasattr(progress, 'progress_percentage'):
+            self.progress_panel.update_overall_progress(
+                progress.progress_percentage,
+                f"CodexCtl: {progress.message}"
+            )
+    
+    def _on_codexctl_status(self, status: str) -> None:
+        """Handle CodexCtl status updates."""
+        # Update main status bar
+        self._update_status(f"CodexCtl: {status}")
+    
+    def _fix_ethernet(self) -> None:
+        """Fix USB ethernet adapter connectivity."""
+        if not self.device or not self.device.is_connected():
+            self._update_status("Device not connected for ethernet fix")
+            return
+        
+        self.logger.info("Installing USB ethernet fix...")
+        self._update_status("Fixing USB ethernet adapter...")
+        
+        def run_ethernet_fix():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                
+                success = network_service.install_ethernet_fix()
+                
+                if success:
+                    self.root.after(0, lambda: self._update_status("USB ethernet fix completed successfully"))
+                    self.root.after(0, lambda: self.logger.info("USB ethernet adapter should now be working at 10.11.99.1"))
+                else:
+                    self.root.after(0, lambda: self._update_status("USB ethernet fix failed"))
+                    
+            except Exception as e:
+                self.logger.error(f"Ethernet fix failed: {e}")
+                self.root.after(0, lambda: self._update_status(f"Ethernet fix failed: {e}"))
+        
         threading.Thread(target=run_ethernet_fix, daemon=True).start()
     
     def _ensure_connected(self) -> bool:

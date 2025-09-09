@@ -14,8 +14,9 @@ from typing import Optional, List
 
 # Import core modules
 from remarkable_xovi_installer.config.settings import (
-    init_config, get_config, AppConfig, DeviceType
+    init_config, get_config, AppConfig
 )
+from remarkable_xovi_installer.models.device import DeviceType
 from remarkable_xovi_installer.models.device import Device
 from remarkable_xovi_installer.models.installation_state import InstallationState, InstallationStage
 from remarkable_xovi_installer.utils.logger import setup_logging, get_logger
@@ -23,6 +24,7 @@ from remarkable_xovi_installer.utils.validators import get_validator
 from remarkable_xovi_installer.services.network_service import init_network_service, get_network_service
 from remarkable_xovi_installer.services.file_service import init_file_service, get_file_service
 from remarkable_xovi_installer.services.backup_service import init_backup_service, get_backup_service
+from remarkable_xovi_installer.services.codexctl_service import init_codexctl_service, get_codexctl_service
 from remarkable_xovi_installer.services.installation_service import (
     init_installation_service, get_installation_service, InstallationType
 )
@@ -77,10 +79,16 @@ class XOVIInstallerApp:
             init_backup_service(get_network_service(), get_file_service())
             
             init_installation_service(
-                self.config, 
-                get_network_service(), 
-                get_file_service(), 
+                self.config,
+                get_network_service(),
+                get_file_service(),
                 self.device
+            )
+            
+            # Initialize CodexCtl service
+            init_codexctl_service(
+                binary_dir=self.config.get_config_dir() / "codexctl",
+                timeout=300  # 5 minute timeout for firmware operations
             )
             
             self.logger.info("Application initialization completed")

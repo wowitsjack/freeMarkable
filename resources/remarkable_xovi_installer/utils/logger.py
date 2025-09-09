@@ -290,6 +290,15 @@ class XOVILogger:
         """
         self.logger.log(LogLevel.WARNING.value, message)
     
+    def warning(self, message: str) -> None:
+        """
+        Warning logging function (alias for warn() for compatibility).
+        
+        Args:
+            message: Warning message to log
+        """
+        self.warn(message)
+    
     def info(self, message: str) -> None:
         """
         Info logging function (matches bash script info()).

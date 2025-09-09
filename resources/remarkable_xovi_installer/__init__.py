@@ -5,7 +5,7 @@ A sophisticated Python application for installing XOVI on reMarkable tablets,
 ported from the original Bash script with enhanced GUI and functionality.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 __author__ = "freeMarkable Team"
 __description__ = "Python port of the freeMarkable installer with CustomTkinter GUI"
 
