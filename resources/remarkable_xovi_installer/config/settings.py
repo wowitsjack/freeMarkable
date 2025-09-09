@@ -17,6 +17,18 @@ if TYPE_CHECKING:
     from ..models.device import DeviceType
 
 
+def _get_version_from_file() -> str:
+    """Read version from VERSION file in resources directory."""
+    try:
+        version_file = Path(__file__).parent.parent / "VERSION"
+        if version_file.exists():
+            return version_file.read_text().strip()
+    except Exception:
+        pass
+    # Fallback to hardcoded version if file doesn't exist
+    return "1.0.5"
+
+
 class LogLevel(Enum):
     """Available log levels."""
     DEBUG = "DEBUG"
@@ -210,7 +222,7 @@ class AppConfig:
     device: DeviceConfig = field(default_factory=DeviceConfig)
     
     # Application metadata
-    version: str = "1.0.5"
+    version: str = field(default_factory=_get_version_from_file)
     app_name: str = "freeMarkable"
     config_version: str = "1.0"
     
@@ -416,7 +428,7 @@ class AppConfig:
             installation=installation_config,
             ui=ui_config,
             device=device_config,
-            version=config_dict.get('version', '1.0.5'),
+            version=config_dict.get('version', _get_version_from_file()),
             app_name=config_dict.get('app_name', 'freeMarkable'),
             config_version=config_dict.get('config_version', '1.0'),
             debug_mode=config_dict.get('debug_mode', False),
