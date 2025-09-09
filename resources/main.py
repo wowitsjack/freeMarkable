@@ -237,11 +237,31 @@ class XOVIInstallerApp:
         try:
             # Import GUI components
             from remarkable_xovi_installer.gui.main_window import MainWindow
+            from remarkable_xovi_installer.gui.components.preflight_dialog import show_preflight_checklist
+            import customtkinter as ctk
             
             self.logger.info("Starting GUI mode")
             self.gui_mode = True
             
-            # Create and run GUI
+            # Track if pre-flight completed successfully
+            preflight_completed = False
+            
+            def on_preflight_complete():
+                nonlocal preflight_completed
+                preflight_completed = True
+            
+            # Show pre-flight checklist dialog (without parent window for better visibility)
+            self.logger.info("Showing pre-flight checklist")
+            show_preflight_checklist(None, on_preflight_complete)
+            
+            # Only proceed if pre-flight was completed
+            if not preflight_completed:
+                self.logger.info("Pre-flight checklist not completed - exiting")
+                return False
+            
+            self.logger.info("Pre-flight checklist completed - launching main application")
+            
+            # Create and run main GUI
             app = MainWindow(
                 config=self.config,
                 device=self.device,
