@@ -20,13 +20,14 @@ if TYPE_CHECKING:
 def _get_version_from_file() -> str:
     """Read version from VERSION file in resources directory."""
     try:
-        version_file = Path(__file__).parent.parent / "VERSION"
+        # Go up to resources directory and find VERSION file
+        version_file = Path(__file__).parent.parent.parent / "VERSION"
         if version_file.exists():
             return version_file.read_text().strip()
     except Exception:
         pass
     # Fallback to hardcoded version if file doesn't exist
-    return "1.0.5"
+    return "1.0.10"
 
 
 class LogLevel(Enum):
