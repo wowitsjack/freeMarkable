@@ -52,11 +52,11 @@ class MainWindow:
         # Initialize core services first
         self._initialize_core_services()
         
-        # Create main window with MASSIVE default size to show all content
+        # Create main window with reasonable default size for standard scaling
         self.root = ctk.CTk()
         self.root.title(f"{self.config.app_name} v{self.config.version}")
-        self.root.geometry("1500x1400")  # MASSIVE height - 1400 pixels tall!
-        self.root.minsize(1400, 1300)   # Very large minimum size
+        self.root.geometry("800x700")   # Reasonable size for standard displays
+        self.root.minsize(700, 600)     # Reasonable minimum size
         
         # Force the window to be resizable and ensure it takes the geometry
         self.root.resizable(True, True)

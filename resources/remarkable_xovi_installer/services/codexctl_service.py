@@ -142,11 +142,8 @@ class CodexCtlService:
         
         self.logger.info("CodexCtl service initialized")
         
-        # Attempt to auto-fetch binary on launch if conditions are met
-        try:
-            self._auto_fetch_binary_on_launch()
-        except Exception as e:
-            self.logger.debug(f"Auto-fetch binary on launch failed: {e}")
+        # Auto-download disabled - codexctl binary must be manually provided
+        self.logger.debug("Auto-download of codexctl binary is disabled")
     
     def set_progress_callback(self, callback: Callable[[CodexCtlProgress], None]) -> None:
         """Set callback for operation progress updates."""
@@ -504,12 +501,12 @@ class CodexCtlService:
         raise RuntimeError("Binary not found in TAR archive")
     
     def ensure_binary_available(self) -> bool:
-        """Ensure codexctl binary is available, downloading if necessary."""
+        """Check if codexctl binary is available (auto-download disabled)."""
         if self.is_binary_available():
             return True
         
-        self.logger.info("CodexCtl binary not found, downloading...")
-        return self.download_binary()
+        self.logger.warning("CodexCtl binary not found. Auto-download is disabled - please provide binary manually")
+        return False
     
     def get_firmware_versions(self, force_refresh: bool = False) -> List[FirmwareVersion]:
         """
