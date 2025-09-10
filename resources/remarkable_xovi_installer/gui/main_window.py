@@ -1667,6 +1667,282 @@ class MainWindow:
         
         show_uninstall_confirmation()
     
+    def _show_hard_reboot_popup(self) -> None:
+        """Show critical hard reboot warning popup after installation."""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("CRITICAL: Hard Reboot Required")
+        dialog.geometry("550x400")
+        dialog.resizable(False, False)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (550 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (400 // 2)
+        dialog.geometry(f"550x400+{x}+{y}")
+        
+        # Make it modal and force it to stay on top
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.lift()
+        dialog.focus_force()
+        
+        # Configure frame
+        content_frame = ctk.CTkFrame(dialog)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Critical warning title with red color
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="⚠️ CRITICAL: HARD REBOOT REQUIRED ⚠️",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#ff4444"
+        )
+        title_label.pack(pady=(10, 20))
+        
+        # Main warning message
+        warning_label = ctk.CTkLabel(
+            content_frame,
+            text="Installation completed successfully!\n\nYou MUST now perform a HARD REBOOT using the power button:",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            justify="center"
+        )
+        warning_label.pack(pady=(0, 15))
+        
+        # Step-by-step instructions frame
+        instructions_frame = ctk.CTkFrame(content_frame)
+        instructions_frame.pack(fill="x", padx=10, pady=(0, 15))
+        
+        ctk.CTkLabel(
+            instructions_frame,
+            text="POWER BUTTON REBOOT STEPS:",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#ff8844"
+        ).pack(pady=(15, 10))
+        
+        # Step 1
+        step1_frame = ctk.CTkFrame(instructions_frame, fg_color="transparent")
+        step1_frame.pack(fill="x", padx=15, pady=2)
+        
+        ctk.CTkLabel(
+            step1_frame,
+            text="1. PRESS the power button ONCE (short press)",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+        
+        # Step 2
+        step2_frame = ctk.CTkFrame(instructions_frame, fg_color="transparent")
+        step2_frame.pack(fill="x", padx=15, pady=2)
+        
+        ctk.CTkLabel(
+            step2_frame,
+            text="2. Then PRESS AND HOLD the power button until device shuts off",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+        
+        # Step 3
+        step3_frame = ctk.CTkFrame(instructions_frame, fg_color="transparent")
+        step3_frame.pack(fill="x", padx=15, pady=(2, 15))
+        
+        ctk.CTkLabel(
+            step3_frame,
+            text="3. Press power button again to turn device back on",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+        
+        # Critical warning about boot loop
+        loop_warning_frame = ctk.CTkFrame(content_frame)
+        loop_warning_frame.pack(fill="x", padx=10, pady=(0, 15))
+        
+        ctk.CTkLabel(
+            loop_warning_frame,
+            text="⚠️ WARNING: THE LOADER WILL LOOP UNTIL THIS IS DONE! ⚠️",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#ff4444"
+        ).pack(pady=(15, 5))
+        
+        ctk.CTkLabel(
+            loop_warning_frame,
+            text="If you don't perform the hard reboot, your device may appear stuck\nin a boot loop. This is normal - just follow the steps above.",
+            font=ctk.CTkFont(size=11),
+            justify="center",
+            text_color="gray"
+        ).pack(pady=(0, 15))
+        
+        # Confirmation checkbox
+        self.reboot_understood = tk.BooleanVar(value=False)
+        checkbox_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        checkbox_frame.pack(fill="x", pady=(0, 15))
+        
+        reboot_checkbox = ctk.CTkCheckBox(
+            checkbox_frame,
+            text="I understand and will perform the hard reboot now",
+            variable=self.reboot_understood,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        reboot_checkbox.pack()
+        
+        # Button frame
+        button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        button_frame.pack(fill="x")
+        
+        def close_dialog():
+            if self.reboot_understood.get():
+                dialog.destroy()
+            else:
+                # Flash the checkbox to draw attention
+                reboot_checkbox.configure(text_color="#ff4444")
+                self.root.after(500, lambda: reboot_checkbox.configure(text_color=("gray10", "gray90")))
+        
+        def auto_reboot():
+            if not self.reboot_understood.get():
+                # Flash the checkbox to draw attention
+                reboot_checkbox.configure(text_color="#ff4444")
+                self.root.after(500, lambda: reboot_checkbox.configure(text_color=("gray10", "gray90")))
+                return
+            
+            # Close dialog and initiate automatic reboot
+            dialog.destroy()
+            self._perform_automatic_reboot()
+        
+        # Button container for side-by-side layout
+        buttons_container = ctk.CTkFrame(button_frame, fg_color="transparent")
+        buttons_container.pack(expand=True)
+        
+        # Manual reboot button
+        manual_button = ctk.CTkButton(
+            buttons_container,
+            text="✅ I Will Hard Reboot Manually",
+            command=close_dialog,
+            width=200,
+            height=45,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#28a745",
+            hover_color="#218838"
+        )
+        manual_button.pack(side="left", padx=(0, 10))
+        
+        # Automatic reboot button
+        auto_button = ctk.CTkButton(
+            buttons_container,
+            text="🔄 Automatic Hard Reboot Now",
+            command=auto_reboot,
+            width=200,
+            height=45,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#dc3545",
+            hover_color="#c82333"
+        )
+        auto_button.pack(side="left", padx=(10, 0))
+        
+        # Log the critical warning
+        self.logger.warning("CRITICAL: Hard reboot popup displayed - user MUST perform power button reboot")
+    
+    def _perform_automatic_reboot(self) -> None:
+        """Perform automatic hard reboot of the device."""
+        if not self.device or not self.device.is_connected():
+            self._update_status("Cannot perform automatic reboot - device not connected")
+            self.logger.error("Automatic reboot failed: device not connected")
+            return
+        
+        self.logger.warning("PERFORMING AUTOMATIC HARD REBOOT - Device will shut down immediately")
+        self._update_status("Performing automatic hard reboot...")
+        
+        # Show immediate feedback to user
+        reboot_dialog = ctk.CTkToplevel(self.root)
+        reboot_dialog.title("Automatic Hard Reboot In Progress")
+        reboot_dialog.geometry("450x250")
+        reboot_dialog.resizable(False, False)
+        
+        # Center the dialog
+        reboot_dialog.update_idletasks()
+        x = (reboot_dialog.winfo_screenwidth() // 2) - (450 // 2)
+        y = (reboot_dialog.winfo_screenheight() // 2) - (250 // 2)
+        reboot_dialog.geometry(f"450x250+{x}+{y}")
+        
+        # Make it modal
+        reboot_dialog.transient(self.root)
+        reboot_dialog.grab_set()
+        
+        content_frame = ctk.CTkFrame(reboot_dialog)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="🔄 Automatic Hard Reboot In Progress",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="#ff8844"
+        )
+        title_label.pack(pady=(10, 15))
+        
+        status_label = ctk.CTkLabel(
+            content_frame,
+            text="Executing hard reboot command...\n\nYour device will shut down immediately.\nPlease wait for it to turn off completely,\nthen press the power button to turn it back on.",
+            font=ctk.CTkFont(size=12),
+            justify="center"
+        )
+        status_label.pack(pady=(0, 20))
+        
+        # Progress bar
+        progress_bar = ctk.CTkProgressBar(content_frame, width=300)
+        progress_bar.pack(pady=(0, 15))
+        progress_bar.set(0.0)
+        
+        def execute_reboot():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                
+                # Update progress
+                self.root.after(0, lambda: progress_bar.set(0.3))
+                self.root.after(0, lambda: status_label.configure(text="Sending reboot command..."))
+                
+                # Execute the hard reboot command - this will cut the connection immediately
+                # Use nohup to ensure command executes even if SSH connection is lost
+                reboot_command = """
+                    echo 'Initiating automatic hard reboot...'
+                    sync
+                    nohup bash -c 'sleep 1; echo s > /proc/sysrq-trigger; sleep 1; echo b > /proc/sysrq-trigger' &
+                    exit 0
+                """
+                
+                # Execute with very short timeout since connection will be lost
+                result = network_service.execute_command(reboot_command, timeout=5)
+                
+                # Update progress - command sent successfully
+                self.root.after(0, lambda: progress_bar.set(1.0))
+                self.root.after(0, lambda: status_label.configure(
+                    text="Hard reboot command sent successfully!\n\nYour device is shutting down now.\nWait for it to fully shut off,\nthen press power button to restart."
+                ))
+                
+                # Auto-close dialog after 5 seconds
+                self.root.after(5000, lambda: reboot_dialog.destroy())
+                
+                self.logger.info("Automatic hard reboot command executed successfully")
+                self.root.after(0, lambda: self._update_status("Automatic hard reboot initiated - device shutting down"))
+                
+            except Exception as e:
+                # This is expected since the connection will be lost during reboot
+                if "timeout" in str(e).lower() or "connection" in str(e).lower():
+                    # This is normal - the device is rebooting
+                    self.root.after(0, lambda: progress_bar.set(1.0))
+                    self.root.after(0, lambda: status_label.configure(
+                        text="Hard reboot initiated successfully!\n\nConnection lost as expected.\nYour device is shutting down.\nPress power button when it's fully off."
+                    ))
+                    self.root.after(5000, lambda: reboot_dialog.destroy())
+                    self.logger.info("Automatic hard reboot command sent - connection lost as expected")
+                    self.root.after(0, lambda: self._update_status("Hard reboot in progress - connection lost"))
+                else:
+                    # Actual error
+                    self.logger.error(f"Automatic reboot failed: {e}")
+                    self.root.after(0, lambda: status_label.configure(
+                        text=f"Automatic reboot failed: {e}\n\nPlease perform manual hard reboot using power button.",
+                        text_color="#ff4444"
+                    ))
+                    self.root.after(0, lambda: self._update_status(f"Automatic reboot failed: {e}"))
+        
+        # Start reboot in background thread
+        threading.Thread(target=execute_reboot, daemon=True).start()
+    
     def _open_help(self) -> None:
         """Open help dialog."""
         help_dialog = ctk.CTkToplevel(self.root)
@@ -1765,6 +2041,10 @@ SUPPORT:
         if success:
             self._update_status(f"{operation_name} completed successfully")
             self.progress_panel.complete_operation(True, f"{operation_name} completed successfully")
+            
+            # Show critical hard reboot popup for successful installations
+            self._show_hard_reboot_popup()
+            
             # Reset app state after successful installation
             self._reset_app_state()
         else:
