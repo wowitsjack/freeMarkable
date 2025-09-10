@@ -304,52 +304,52 @@ class MainWindow:
         
         # Installation options section (top)
         install_frame = ctk.CTkFrame(main_tab)
-        install_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+        install_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5, 3))
         install_frame.grid_columnconfigure((0, 1, 2), weight=1)
         
         # Section title
         ctk.CTkLabel(
             install_frame,
             text="🚀 Installation Options",
-            font=ctk.CTkFont(size=18, weight="bold")
-        ).grid(row=0, column=0, columnspan=3, pady=(15, 20), sticky="w", padx=15)
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).grid(row=0, column=0, columnspan=3, pady=(5, 7), sticky="w", padx=5)
         
         # Full installation option
         self.full_install_button = ctk.CTkButton(
             install_frame,
             text="📦 Full Install\n(XOVI + AppLoad + KOReader)",
             command=lambda: self._show_install_prompt("full"),
-            width=180,
-            height=80,
-            font=ctk.CTkFont(size=12, weight="bold")
+            width=90,
+            height=40,
+            font=ctk.CTkFont(size=9, weight="bold")
         )
-        self.full_install_button.grid(row=1, column=0, padx=15, pady=10)
+        self.full_install_button.grid(row=1, column=0, padx=5, pady=3)
         
         # Launcher only option
         self.launcher_install_button = ctk.CTkButton(
             install_frame,
             text="🔧 Launcher Only\n(XOVI + AppLoad)",
             command=lambda: self._show_install_prompt("launcher"),
-            width=180,
-            height=80,
-            font=ctk.CTkFont(size=12, weight="bold"),
+            width=90,
+            height=40,
+            font=ctk.CTkFont(size=9, weight="bold"),
             fg_color="gray",
             hover_color="#606060"
         )
-        self.launcher_install_button.grid(row=1, column=1, padx=15, pady=10)
+        self.launcher_install_button.grid(row=1, column=1, padx=5, pady=3)
         
         # Uninstall option
         self.uninstall_button = ctk.CTkButton(
             install_frame,
             text="🗑️ Uninstall\n(Remove XOVI)",
             command=lambda: self._uninstall_with_connect(),
-            width=180,
-            height=80,
-            font=ctk.CTkFont(size=12, weight="bold"),
+            width=90,
+            height=40,
+            font=ctk.CTkFont(size=9, weight="bold"),
             fg_color="#8b2635",
             hover_color="#6b1c28"
         )
-        self.uninstall_button.grid(row=1, column=2, padx=15, pady=10)
+        self.uninstall_button.grid(row=1, column=2, padx=5, pady=3)
         
         # Quick backup button
         ctk.CTkButton(
@@ -387,21 +387,29 @@ class MainWindow:
         ).grid(row=0, column=0, pady=(15, 10), sticky="w", padx=15)
         
         # Progress section
-        progress_container = ctk.CTkFrame(monitor_frame)
-        progress_container.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 10))
+        # Create horizontal container for progress and logs side by side
+        horizontal_container = ctk.CTkFrame(monitor_frame, fg_color="transparent")
+        horizontal_container.grid(row=1, column=0, sticky="nsew", padx=15, pady=(0, 15))
+        horizontal_container.grid_columnconfigure(0, weight=1)  # Progress panel column
+        horizontal_container.grid_columnconfigure(1, weight=1)  # Log panel column
+        horizontal_container.grid_rowconfigure(0, weight=1)
+        monitor_frame.grid_rowconfigure(1, weight=1)  # Give horizontal container all remaining space
+        
+        # Progress panel (left side)
+        progress_container = ctk.CTkFrame(horizontal_container)
+        progress_container.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
         
         self.progress_panel = ProgressPanel(progress_container)
-        self.progress_panel.pack(fill="both", expand=True, padx=10, pady=10)
+        self.progress_panel.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Log section
-        log_container = ctk.CTkFrame(monitor_frame)
-        log_container.grid(row=2, column=0, sticky="nsew", padx=15, pady=(0, 15))
+        # Log panel (right side)
+        log_container = ctk.CTkFrame(horizontal_container)
+        log_container.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=0)
         log_container.grid_columnconfigure(0, weight=1)
         log_container.grid_rowconfigure(0, weight=1)
-        monitor_frame.grid_rowconfigure(2, weight=2)  # Give logs more space
         
         self.log_panel = LogPanel(log_container)
-        self.log_panel.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.log_panel.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
     
     def _setup_backup_tab(self) -> None:
         """Setup backup and restore tab content."""

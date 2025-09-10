@@ -101,14 +101,14 @@ class LogPanel(ctk.CTkFrame):
         
         # Header frame
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        header_frame.grid(row=0, column=0, sticky="ew", pady=(10, 5))
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(3, 2))
         header_frame.grid_columnconfigure(1, weight=1)
         
         # Panel title
         title_label = ctk.CTkLabel(
             header_frame,
             text="Application Logs",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=12, weight="bold")
         )
         title_label.grid(row=0, column=0, sticky="w")
         
@@ -120,10 +120,11 @@ class LogPanel(ctk.CTkFrame):
         self.level_filter = ctk.CTkOptionMenu(
             controls_frame,
             values=["All", "Info+", "Warning+", "Error Only"],
-            width=100,
-            command=self._on_filter_changed
+            width=70,
+            command=self._on_filter_changed,
+            font=ctk.CTkFont(size=8)
         )
-        self.level_filter.grid(row=0, column=0, padx=2)
+        self.level_filter.grid(row=0, column=0, padx=1)
         self.level_filter.set("All")
         
         # Auto-scroll toggle
@@ -132,34 +133,37 @@ class LogPanel(ctk.CTkFrame):
             controls_frame,
             text="Auto-scroll",
             variable=self.auto_scroll_var,
-            width=80,
-            command=self._on_auto_scroll_toggled
+            width=60,
+            command=self._on_auto_scroll_toggled,
+            font=ctk.CTkFont(size=8)
         )
-        self.auto_scroll_checkbox.grid(row=0, column=1, padx=2)
+        self.auto_scroll_checkbox.grid(row=0, column=1, padx=1)
         
         # Clear button
         self.clear_button = ctk.CTkButton(
             controls_frame,
             text="Clear",
             command=self._clear_logs,
-            width=60,
-            height=25
+            width=40,
+            height=18,
+            font=ctk.CTkFont(size=8)
         )
-        self.clear_button.grid(row=0, column=2, padx=2)
+        self.clear_button.grid(row=0, column=2, padx=1)
         
         # Save button
         self.save_button = ctk.CTkButton(
             controls_frame,
             text="Save",
             command=self._save_logs,
-            width=60,
-            height=25
+            width=40,
+            height=18,
+            font=ctk.CTkFont(size=8)
         )
-        self.save_button.grid(row=0, column=3, padx=2)
+        self.save_button.grid(row=0, column=3, padx=1)
         
         # Log display frame
         log_display_frame = ctk.CTkFrame(self)
-        log_display_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        log_display_frame.grid(row=1, column=0, sticky="nsew", padx=3, pady=(0, 3))
         log_display_frame.grid_columnconfigure(0, weight=1)
         log_display_frame.grid_rowconfigure(0, weight=1)
         
@@ -167,21 +171,21 @@ class LogPanel(ctk.CTkFrame):
         self.log_text = ctk.CTkTextbox(
             log_display_frame,
             wrap="word",
-            font=ctk.CTkFont(family="Consolas", size=11),
+            font=ctk.CTkFont(family="Consolas", size=8),
             state="disabled"
         )
-        self.log_text.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.log_text.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         
         # Bottom info frame
         info_frame = ctk.CTkFrame(self, fg_color="transparent")
-        info_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
+        info_frame.grid(row=2, column=0, sticky="ew", padx=3, pady=(0, 2))
         info_frame.grid_columnconfigure(1, weight=1)
         
         # Log count
         self.log_count_label = ctk.CTkLabel(
             info_frame,
             text="0 log entries",
-            font=ctk.CTkFont(size=10),
+            font=ctk.CTkFont(size=7),
             text_color="gray"
         )
         self.log_count_label.grid(row=0, column=0, sticky="w")

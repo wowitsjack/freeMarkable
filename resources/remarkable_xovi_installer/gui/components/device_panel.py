@@ -76,21 +76,22 @@ class DevicePanel(ctk.CTkFrame):
         title_label = ctk.CTkLabel(
             self,
             text="Device Connection",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=12, weight="bold")
         )
-        title_label.grid(row=0, column=0, columnspan=3, pady=(10, 15), sticky="w")
+        title_label.grid(row=0, column=0, columnspan=3, pady=(3, 5), sticky="w")
         
         # IP Address input
-        ip_label = ctk.CTkLabel(self, text="IP Address:")
-        ip_label.grid(row=1, column=0, padx=(10, 5), pady=5, sticky="w")
+        ip_label = ctk.CTkLabel(self, text="IP Address:", font=ctk.CTkFont(size=9))
+        ip_label.grid(row=1, column=0, padx=(3, 2), pady=2, sticky="w")
         
         self.ip_entry = ctk.CTkEntry(
             self,
             textvariable=self.ip_var,
             placeholder_text="10.11.99.1",
-            width=200
+            width=100,
+            font=ctk.CTkFont(size=9)
         )
-        self.ip_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.ip_entry.grid(row=1, column=1, padx=2, pady=2, sticky="ew")
         
         # IP validation indicator
         self.ip_status_label = ctk.CTkLabel(
@@ -99,45 +100,46 @@ class DevicePanel(ctk.CTkFrame):
             text_color="green",
             width=20
         )
-        self.ip_status_label.grid(row=1, column=2, padx=(5, 10), pady=5)
+        self.ip_status_label.grid(row=1, column=2, padx=(2, 3), pady=2)
         
         # Password input
-        password_label = ctk.CTkLabel(self, text="SSH Password:")
-        password_label.grid(row=2, column=0, padx=(10, 5), pady=5, sticky="w")
+        password_label = ctk.CTkLabel(self, text="SSH Password:", font=ctk.CTkFont(size=9))
+        password_label.grid(row=2, column=0, padx=(3, 2), pady=2, sticky="w")
         
         self.password_entry = ctk.CTkEntry(
             self,
             textvariable=self.password_var,
             placeholder_text="Enter SSH password",
             show="*",
-            width=200
+            width=100,
+            font=ctk.CTkFont(size=9)
         )
-        self.password_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+        self.password_entry.grid(row=2, column=1, padx=2, pady=2, sticky="ew")
         
         # Password show/hide toggle
         self.password_toggle = ctk.CTkButton(
             self,
             text="👁",
-            width=30,
-            height=28,
+            width=15,
+            height=14,
             command=self._toggle_password_visibility
         )
-        self.password_toggle.grid(row=2, column=2, padx=(5, 10), pady=5)
+        self.password_toggle.grid(row=2, column=2, padx=(2, 3), pady=2)
         
         # Device type display
-        device_type_label = ctk.CTkLabel(self, text="Device Type:")
-        device_type_label.grid(row=3, column=0, padx=(10, 5), pady=5, sticky="w")
+        device_type_label = ctk.CTkLabel(self, text="Device Type:", font=ctk.CTkFont(size=9))
+        device_type_label.grid(row=3, column=0, padx=(3, 2), pady=2, sticky="w")
         
         self.device_type_display = ctk.CTkLabel(
             self,
             textvariable=self.device_type_var,
             text_color="gray"
         )
-        self.device_type_display.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+        self.device_type_display.grid(row=3, column=1, padx=2, pady=2, sticky="w")
         
         # Connection controls frame
         controls_frame = ctk.CTkFrame(self, fg_color="transparent")
-        controls_frame.grid(row=4, column=0, columnspan=3, pady=10, sticky="ew")
+        controls_frame.grid(row=4, column=0, columnspan=3, pady=3, sticky="ew")
         controls_frame.grid_columnconfigure(1, weight=1)
         
         # Test connection button
@@ -145,9 +147,9 @@ class DevicePanel(ctk.CTkFrame):
             controls_frame,
             text="Test Connection",
             command=self._test_connection,
-            width=120
+            width=60
         )
-        self.test_button.grid(row=0, column=0, padx=(10, 5), pady=5)
+        self.test_button.grid(row=0, column=0, padx=(3, 2), pady=2)
         
         # Connection status
         self.connection_status_label = ctk.CTkLabel(
@@ -155,20 +157,20 @@ class DevicePanel(ctk.CTkFrame):
             text="● Disconnected",
             text_color="red"
         )
-        self.connection_status_label.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.connection_status_label.grid(row=0, column=1, padx=2, pady=2, sticky="w")
         
         # Advanced button
         self.advanced_button = ctk.CTkButton(
             controls_frame,
             text="Advanced",
             command=self._show_advanced_options,
-            width=80
+            width=40
         )
-        self.advanced_button.grid(row=0, column=2, padx=(5, 10), pady=5)
+        self.advanced_button.grid(row=0, column=2, padx=(2, 3), pady=2)
         
         # Device info frame (initially hidden)
         self.info_frame = ctk.CTkFrame(self)
-        self.info_frame.grid(row=5, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="ew")
+        self.info_frame.grid(row=5, column=0, columnspan=3, padx=5, pady=(0, 5), sticky="ew")
         self.info_frame.grid_columnconfigure(1, weight=1)
         self.info_frame.grid_remove()  # Hidden by default
         
@@ -180,22 +182,22 @@ class DevicePanel(ctk.CTkFrame):
         info_title = ctk.CTkLabel(
             self.info_frame,
             text="Device Information",
-            font=ctk.CTkFont(size=14, weight="bold")
+            font=ctk.CTkFont(size=11, weight="bold")
         )
-        info_title.grid(row=0, column=0, columnspan=2, pady=(10, 5), sticky="w")
+        info_title.grid(row=0, column=0, columnspan=2, pady=(5, 3), sticky="w")
         
         # Device info fields
-        self.hostname_label = ctk.CTkLabel(self.info_frame, text="Hostname: Unknown")
-        self.hostname_label.grid(row=1, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self.hostname_label = ctk.CTkLabel(self.info_frame, text="Hostname: Unknown", font=ctk.CTkFont(size=8))
+        self.hostname_label.grid(row=1, column=0, columnspan=2, padx=5, pady=1, sticky="w")
         
-        self.version_label = ctk.CTkLabel(self.info_frame, text="Version: Unknown") 
-        self.version_label.grid(row=2, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self.version_label = ctk.CTkLabel(self.info_frame, text="Version: Unknown", font=ctk.CTkFont(size=8))
+        self.version_label.grid(row=2, column=0, columnspan=2, padx=5, pady=1, sticky="w")
         
-        self.space_label = ctk.CTkLabel(self.info_frame, text="Free Space: Unknown")
-        self.space_label.grid(row=3, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self.space_label = ctk.CTkLabel(self.info_frame, text="Free Space: Unknown", font=ctk.CTkFont(size=8))
+        self.space_label.grid(row=3, column=0, columnspan=2, padx=5, pady=1, sticky="w")
         
-        self.network_label = ctk.CTkLabel(self.info_frame, text="Network: Unknown")
-        self.network_label.grid(row=4, column=0, columnspan=2, padx=10, pady=(2, 10), sticky="w")
+        self.network_label = ctk.CTkLabel(self.info_frame, text="Network: Unknown", font=ctk.CTkFont(size=8))
+        self.network_label.grid(row=4, column=0, columnspan=2, padx=5, pady=(1, 5), sticky="w")
     
     def _setup_validation(self) -> None:
         """Setup input validation and callbacks."""

@@ -75,13 +75,13 @@ class ProgressPanel(ctk.CTkFrame):
         
         # Panel title
         title_frame = ctk.CTkFrame(self, fg_color="transparent")
-        title_frame.grid(row=0, column=0, sticky="ew", pady=(10, 5))
+        title_frame.grid(row=0, column=0, sticky="ew", pady=(5, 3))
         title_frame.grid_columnconfigure(1, weight=1)
         
         title_label = ctk.CTkLabel(
             title_frame,
             text="Installation Progress",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=12, weight="bold")
         )
         title_label.grid(row=0, column=0, sticky="w")
         
@@ -89,85 +89,85 @@ class ProgressPanel(ctk.CTkFrame):
         self.operation_status_label = ctk.CTkLabel(
             title_frame,
             text="Ready",
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=9),
             text_color="gray"
         )
         self.operation_status_label.grid(row=0, column=1, sticky="e")
         
         # Main progress section
         progress_frame = ctk.CTkFrame(self)
-        progress_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+        progress_frame.grid(row=1, column=0, sticky="ew", padx=3, pady=2)
         progress_frame.grid_columnconfigure(0, weight=1)
         
         # Overall progress
         overall_label = ctk.CTkLabel(
             progress_frame,
             text="Overall Progress:",
-            font=ctk.CTkFont(size=13, weight="bold")
+            font=ctk.CTkFont(size=10, weight="bold")
         )
-        overall_label.grid(row=0, column=0, sticky="w", padx=10, pady=(10, 5))
+        overall_label.grid(row=0, column=0, sticky="w", padx=3, pady=(3, 2))
         
         self.overall_progress_bar = ctk.CTkProgressBar(
             progress_frame,
-            height=20,
+            height=10,
             progress_color="#2d6e3e"
         )
-        self.overall_progress_bar.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 5))
+        self.overall_progress_bar.grid(row=1, column=0, sticky="ew", padx=3, pady=(0, 2))
         self.overall_progress_bar.set(0)
         
         self.overall_progress_label = ctk.CTkLabel(
             progress_frame,
             text="0% - Ready to start",
-            font=ctk.CTkFont(size=11)
+            font=ctk.CTkFont(size=8)
         )
-        self.overall_progress_label.grid(row=2, column=0, sticky="w", padx=10, pady=(0, 10))
+        self.overall_progress_label.grid(row=2, column=0, sticky="w", padx=3, pady=(0, 3))
         
         # Stage progress section
         stage_frame = ctk.CTkFrame(self)
-        stage_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
+        stage_frame.grid(row=2, column=0, sticky="ew", padx=3, pady=2)
         stage_frame.grid_columnconfigure(1, weight=1)
         
         # Stage indicator
         self.stage_label = ctk.CTkLabel(
             stage_frame,
             text="Stage: Not Started",
-            font=ctk.CTkFont(size=13, weight="bold")
+            font=ctk.CTkFont(size=10, weight="bold")
         )
-        self.stage_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=10, pady=(10, 5))
+        self.stage_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=3, pady=(3, 2))
         
         # Current step
         self.step_label = ctk.CTkLabel(
             stage_frame,
             text="Waiting to begin...",
-            font=ctk.CTkFont(size=12),
-            wraplength=400
+            font=ctk.CTkFont(size=8),
+            wraplength=250
         )
-        self.step_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 5))
+        self.step_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=3, pady=(0, 2))
         
         # Stage progress bar
         self.stage_progress_bar = ctk.CTkProgressBar(
             stage_frame,
-            height=15,
+            height=8,
             progress_color="#1f538d"
         )
-        self.stage_progress_bar.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 5))
+        self.stage_progress_bar.grid(row=2, column=0, columnspan=2, sticky="ew", padx=3, pady=(0, 2))
         self.stage_progress_bar.set(0)
         
         self.stage_progress_label = ctk.CTkLabel(
             stage_frame,
             text="0% - No active stage",
-            font=ctk.CTkFont(size=10)
+            font=ctk.CTkFont(size=7)
         )
-        self.stage_progress_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 10))
+        self.stage_progress_label.grid(row=3, column=0, sticky="w", padx=3, pady=(0, 3))
         
         # Time information
         self.time_label = ctk.CTkLabel(
             stage_frame,
             text="",
-            font=ctk.CTkFont(size=10),
+            font=ctk.CTkFont(size=7),
             text_color="gray"
         )
-        self.time_label.grid(row=3, column=1, sticky="e", padx=10, pady=(0, 10))
+        self.time_label.grid(row=3, column=1, sticky="e", padx=3, pady=(0, 3))
         
         # Download progress section (initially hidden)
         self.download_frame = ctk.CTkFrame(self)

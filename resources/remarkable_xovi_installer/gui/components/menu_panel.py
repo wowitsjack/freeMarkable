@@ -207,7 +207,7 @@ class MenuPanel(ctk.CTkScrollableFrame):
         title_label = ctk.CTkLabel(
             title_frame,
             text="Installation Menu",
-            font=ctk.CTkFont(size=18, weight="bold")
+            font=ctk.CTkFont(size=13, weight="bold")
         )
         title_label.grid(row=0, column=0, sticky="w")
         
@@ -215,7 +215,7 @@ class MenuPanel(ctk.CTkScrollableFrame):
         self.menu_status_label = ctk.CTkLabel(
             title_frame,
             text="Device Required",
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=9),
             text_color="orange"
         )
         self.menu_status_label.grid(row=0, column=1, sticky="e")
@@ -230,9 +230,9 @@ class MenuPanel(ctk.CTkScrollableFrame):
         instructions_label = ctk.CTkLabel(
             instructions_frame,
             text="💡 Tip: Connect your device first to enable installation options",
-            font=ctk.CTkFont(size=11),
+            font=ctk.CTkFont(size=8),
             text_color="gray",
-            wraplength=300
+            wraplength=200
         )
         instructions_label.grid(row=0, column=0, sticky="w")
     
@@ -257,10 +257,10 @@ class MenuPanel(ctk.CTkScrollableFrame):
                 category_label = ctk.CTkLabel(
                     self,
                     text=category_name,
-                    font=ctk.CTkFont(size=14, weight="bold"),
+                    font=ctk.CTkFont(size=10, weight="bold"),
                     text_color="gray"
                 )
-                category_label.grid(row=current_row, column=0, sticky="w", pady=(15, 5))
+                category_label.grid(row=current_row, column=0, sticky="w", pady=(5, 2))
                 current_row += 1
             
             # Create buttons for this category
@@ -303,27 +303,27 @@ class MenuPanel(ctk.CTkScrollableFrame):
             button_frame,
             text=button_text,
             command=lambda cmd=option.command: self._execute_command(cmd),
-            height=40,
-            font=ctk.CTkFont(size=13, weight="normal"),
+            height=20,
+            font=ctk.CTkFont(size=10, weight="normal"),
             fg_color=button_color,
             hover_color=hover_color,
             text_color=text_color,
             anchor="w"
         )
-        button.grid(row=0, column=0, sticky="ew", padx=(10, 5))
+        button.grid(row=0, column=0, sticky="ew", padx=(3, 2))
         
         # Description label
         if option.description:
             desc_label = ctk.CTkLabel(
                 button_frame,
                 text=option.description,
-                font=ctk.CTkFont(size=10),
+                font=ctk.CTkFont(size=7),
                 text_color="gray",
-                wraplength=280,
+                wraplength=180,
                 anchor="w",
                 justify="left"
             )
-            desc_label.grid(row=1, column=0, sticky="ew", padx=(15, 5), pady=(2, 5))
+            desc_label.grid(row=1, column=0, sticky="ew", padx=(5, 2), pady=(1, 2))
         
         return button
     
