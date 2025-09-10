@@ -143,11 +143,9 @@ freeMarkable now includes optional support for **XOVI Triple-Tap Launch** - a po
 
 ### Usage
 1. **During Installation**: Check the "Enable Triple-Tap Launch" option in the GUI or use `--enable-tripletap` flag in CLI
-2. **After Installation**: Complete a device reboot for the service to activate
-3. **Triple-Press Power**: Press the power button three times quickly to launch XOVI
+2. **Triple-Press Power**: Press the power button three times quickly to launch XOVI
 
 ### Requirements
-- **Device Reboot Required**: The triple-tap service requires a full device reboot to activate
 - **XOVI Installation**: Triple-tap feature requires XOVI to be installed first
 - **All Devices Supported**: Works on reMarkable 1, 2, and Paper Pro
 
