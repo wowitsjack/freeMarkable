@@ -270,6 +270,10 @@ class InstallationService:
                 return False
             self._update_progress(InstallationStage.STAGE_1, 90, "Hashtable rebuilt")
             
+            # Step 6: Silent ethernet fix safety net
+            self._update_progress(InstallationStage.STAGE_1, 95, "Applying USB ethernet safety fix")
+            self._apply_ethernet_safety_fix()
+            
             # Note: XOVI activation will be done at the very end of the complete installation
             self._update_progress(InstallationStage.STAGE_1, 100, "Stage 1 complete - XOVI framework ready")
             
@@ -309,7 +313,11 @@ class InstallationService:
                 if not self._install_tripletap():
                     # Don't fail the entire installation for tripletap - it's optional
                     self._log_output("Warning: Tripletap installation failed, but continuing...")
-                self._update_progress(InstallationStage.STAGE_2, 98, "Tripletap installation attempted")
+                self._update_progress(InstallationStage.STAGE_2, 96, "Tripletap installation attempted")
+            
+            # Step 6: Silent ethernet fix safety net
+            self._update_progress(InstallationStage.STAGE_2, 98, "Applying USB ethernet safety fix")
+            self._apply_ethernet_safety_fix()
             
             self._update_progress(InstallationStage.STAGE_2, 100, "Stage 2 complete - XOVI activated")
             
@@ -355,7 +363,11 @@ class InstallationService:
                 if not self._install_tripletap():
                     # Don't fail the entire installation for tripletap - it's optional
                     self._log_output("Warning: Tripletap installation failed, but continuing...")
-                self._update_progress(InstallationStage.LAUNCHER_ONLY, 98, "Tripletap installation attempted")
+                self._update_progress(InstallationStage.LAUNCHER_ONLY, 96, "Tripletap installation attempted")
+
+            # Silent ethernet fix safety net
+            self._update_progress(InstallationStage.LAUNCHER_ONLY, 98, "Applying USB ethernet safety fix")
+            self._apply_ethernet_safety_fix()
 
             self._update_progress(InstallationStage.LAUNCHER_ONLY, 100, "Launcher installation complete, XOVI is active")
             
@@ -931,6 +943,19 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         except Exception as e:
             self._log_output(f"Tripletap installation failed: {e}")
             return False
+    
+    def _apply_ethernet_safety_fix(self) -> None:
+        """Apply USB ethernet fix silently as a safety net."""
+        try:
+            self._log_output("Applying USB ethernet safety fix in background...")
+            success = self.network_service.install_ethernet_fix()
+            if success:
+                self._log_output("USB ethernet safety fix applied successfully")
+            else:
+                self._log_output("USB ethernet safety fix had issues, but continuing...")
+        except Exception as e:
+            # Don't fail installation for ethernet fix issues
+            self._log_output(f"USB ethernet safety fix encountered error (non-fatal): {e}")
     
     def _final_configuration(self) -> bool:
         """Perform final cleanup and restart xochitl to activate all components."""
