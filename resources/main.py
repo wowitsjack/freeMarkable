@@ -384,7 +384,7 @@ Installation Types:
         help='Run Stage 1 only (setup through hashtable rebuild)'
     )
     install_type.add_argument(
-        '--stage2', 
+        '--stage2',
         action='store_true',
         help='Run Stage 2 only (KOReader installation)'
     )
@@ -392,6 +392,13 @@ Installation Types:
         '--continue',
         action='store_true',
         help='Continue from interrupted installation'
+    )
+    
+    # Optional features
+    install_group.add_argument(
+        '--enable-tripletap',
+        action='store_true',
+        help='Enable xovi-tripletap power button handler (triple-press to launch XOVI)'
     )
     
     # Backup options
@@ -467,6 +474,9 @@ def main() -> int:
         
         if args.force:
             app.config.installation.skip_confirmation = True
+        
+        if args.enable_tripletap:
+            app.config.installation.enable_tripletap = True
         
         # Update device configuration
         app.update_device_config(args.ip, args.password, args.device_type)

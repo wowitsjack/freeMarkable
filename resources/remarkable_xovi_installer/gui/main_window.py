@@ -712,6 +712,33 @@ class MainWindow:
                 text_color="gray"
             ).pack(anchor="w", padx=20, pady=1)
         
+        # Optional features section
+        options_frame = ctk.CTkFrame(content_frame)
+        options_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            options_frame,
+            text="🔧 Optional Features:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(15, 10))
+        
+        # Tripletap checkbox
+        self.tripletap_var = tk.BooleanVar(value=False)
+        tripletap_checkbox = ctk.CTkCheckBox(
+            options_frame,
+            text="Enable xovi-tripletap (Power button launcher)",
+            variable=self.tripletap_var
+        )
+        tripletap_checkbox.pack(anchor="w", padx=20, pady=(0, 5))
+        
+        # Tripletap description
+        ctk.CTkLabel(
+            options_frame,
+            text="• Triple-press power button to launch XOVI",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(anchor="w", padx=35, pady=(0, 15))
+        
         # Add some spacing before buttons
         ctk.CTkLabel(content_frame, text="").pack(pady=5)
         
@@ -720,15 +747,17 @@ class MainWindow:
         button_frame.pack(fill="x", pady=(10, 0))
         
         def proceed_install():
+            # Get tripletap preference
+            enable_tripletap = self.tripletap_var.get()
             dialog.destroy()
             # Immediately disable the button to prevent double-clicking
             self.full_install_button.configure(state="disabled")
             self.launcher_install_button.configure(state="disabled")
             
             if install_type == "full":
-                self._install_full_with_connect()
+                self._install_full_with_connect(enable_tripletap=enable_tripletap)
             else:
-                self._install_launcher_with_connect()
+                self._install_launcher_with_connect(enable_tripletap=enable_tripletap)
         
         ctk.CTkButton(
             button_frame,
@@ -1351,12 +1380,12 @@ class MainWindow:
     
     # Actual implementation methods for operations
     
-    def _install_full(self, **kwargs) -> None:
+    def _install_full(self, enable_tripletap: bool = False, **kwargs) -> None:
         """Install XOVI + AppLoader + KOReader (full installation)."""
         if not self._validate_installation_prerequisites():
             return
         
-        self.logger.info("Starting full installation...")
+        self.logger.info(f"Starting full installation (tripletap: {enable_tripletap})...")
         self._update_status("Installing XOVI + AppLoader + KOReader...")
         self.is_operation_running = True
         self._update_operation_buttons(False)  # Disable buttons during operation
@@ -1365,6 +1394,9 @@ class MainWindow:
             try:
                 from ..services.installation_service import get_installation_service, InstallationType
                 installation_service = get_installation_service()
+                
+                # Set tripletap preference
+                installation_service.config.installation.enable_tripletap = enable_tripletap
                 
                 # Set up progress callbacks with proper variable capture
                 def progress_callback(progress):
@@ -1401,12 +1433,12 @@ class MainWindow:
         
         threading.Thread(target=run_installation, daemon=True).start()
     
-    def _install_launcher(self, **kwargs) -> None:
+    def _install_launcher(self, enable_tripletap: bool = False, **kwargs) -> None:
         """Install XOVI + AppLoader only (no KOReader)."""
         if not self._validate_installation_prerequisites():
             return
         
-        self.logger.info("Starting launcher-only installation...")
+        self.logger.info(f"Starting launcher-only installation (tripletap: {enable_tripletap})...")
         self._update_status("Installing XOVI + AppLoader...")
         self.is_operation_running = True
         self._update_operation_buttons(False)
@@ -1415,6 +1447,9 @@ class MainWindow:
             try:
                 from ..services.installation_service import get_installation_service, InstallationType
                 installation_service = get_installation_service()
+                
+                # Set tripletap preference
+                installation_service.config.installation.enable_tripletap = enable_tripletap
                 
                 # Set up progress callbacks with proper variable capture
                 def progress_callback(progress):
@@ -2086,15 +2121,15 @@ SUPPORT:
 
     # Auto-connect wrapper methods for seamless UX
     
-    def _install_full_with_connect(self) -> None:
+    def _install_full_with_connect(self, enable_tripletap: bool = False) -> None:
         """Install full with auto-connect."""
         if self._ensure_connected():
-            self._install_full()
+            self._install_full(enable_tripletap=enable_tripletap)
     
-    def _install_launcher_with_connect(self) -> None:
+    def _install_launcher_with_connect(self, enable_tripletap: bool = False) -> None:
         """Install launcher with auto-connect."""
         if self._ensure_connected():
-            self._install_launcher()
+            self._install_launcher(enable_tripletap=enable_tripletap)
     
     def _create_backup_with_connect(self) -> None:
         """Create backup with auto-connect."""

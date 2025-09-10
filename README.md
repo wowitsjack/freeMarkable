@@ -33,6 +33,7 @@ Please only use this software with a USB cable, WiFi use is not recommended.
 - **Complete XOVI Installation** - Full framework with proper tmpfs overlay activation
 - **AppLoad Integration** - Application launcher system for reMarkable devices
 - **KOReader Installation** - Popular eBook reader with full integration
+- **XOVI Triple-Tap Launch** - Optional power button handler for triple-press XOVI activation
 - **Automatic Backup & Restore** - System backups created before any modifications
 - **Connection Management** - Easy device setup with configuration wizard
 - **Real-time Progress Tracking** - Live installation progress with detailed logging
@@ -130,17 +131,56 @@ freeMarkable supports all reMarkable devices with reliable installations. Featur
 - **Cross-platform** - Works on Linux, Windows, and macOS
 - **Active Development** - Regular updates with bug fixes and improvements
 
+## XOVI Triple-Tap Launch Feature
+
+freeMarkable now includes optional support for **XOVI Triple-Tap Launch** - a power button handler that enables launching XOVI by triple-pressing the power button.
+
+### How It Works
+- **Triple-Press Detection**: Uses evtest to monitor power button presses
+- **Systemd Service**: Runs as a background service for reliable detection
+- **Architecture Support**: Automatically selects correct binaries for your device (armv6l/armv7l/aarch64)
+- **Optional Installation**: Can be enabled during XOVI installation or added later
+
+### Usage
+1. **During Installation**: Check the "Enable Triple-Tap Launch" option in the GUI or use `--enable-tripletap` flag in CLI
+2. **After Installation**: Complete a device reboot for the service to activate
+3. **Triple-Press Power**: Press the power button three times quickly to launch XOVI
+
+### Requirements
+- **Device Reboot Required**: The triple-tap service requires a full device reboot to activate
+- **XOVI Installation**: Triple-tap feature requires XOVI to be installed first
+- **All Devices Supported**: Works on reMarkable 1, 2, and Paper Pro
+
+### Command Line Usage
+```bash
+# Enable triple-tap during full installation
+python resources/main.py --enable-tripletap
+
+# Enable triple-tap with launcher-only installation
+python resources/main.py --launcher-only --enable-tripletap
+```
+
 ## Recent Updates
+
+**v1.0.13**: XOVI Triple-Tap Launch Integration
+- **New Feature**: Added optional XOVI triple-tap launch support via power button
+- **Architecture Detection**: Automatic binary selection for all reMarkable devices
+- **GUI Integration**: Checkbox option for easy triple-tap feature selection
+- **CLI Support**: Command-line flag for automated installations
+- **Systemd Service**: Background service for reliable power button monitoring
+
+**v1.0.12**: UI scaling improvements for standard Windows displays
+- **Enhanced Interface**: Improved GUI scaling and readability
+- **Windows Compatibility**: Better display handling across different screen sizes
+
+**v1.0.11**: Remove codexctl auto-download and fix GUI scaling
+- **CodexCtl Changes**: Removed automatic download functionality
+- **GUI Fixes**: Improved scaling for standard Windows displays
 
 **v1.0.9**: Major reliability improvements and cross-platform fixes
 - **KOReader Detection Fix**: Resolved detection issues for proper installation status reporting
 - **macOS SSL Support**: Added SSL compatibility for seamless macOS operation
 - **Enhanced Stability**: Improved error handling and connection reliability
-
-**v1.0.8**: CodexCtl panel lockout during rewrite phase
-- **UI Updates**: Clean interface messaging during system updates
-- **Backup System**: Enhanced pruning and management features
-- 
 ## Known Issues:
 Sometimes, if the main app (Xochitl) fails to reload properly, a bug in the reMarkable OS (Codex), will cause the USB connection to fail to engage.
 

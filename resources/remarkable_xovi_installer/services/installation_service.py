@@ -302,6 +302,15 @@ class InstallationService:
             # Step 4: CRITICAL FIX - Ensure XOVI is activated (in case Stage 2 is run standalone)
             if not self._activate_xovi():
                 return False
+            self._update_progress(InstallationStage.STAGE_2, 95, "XOVI activated")
+            
+            # Step 5: Install tripletap if enabled (optional convenience feature)
+            if self.config.installation.enable_tripletap:
+                if not self._install_tripletap():
+                    # Don't fail the entire installation for tripletap - it's optional
+                    self._log_output("Warning: Tripletap installation failed, but continuing...")
+                self._update_progress(InstallationStage.STAGE_2, 98, "Tripletap installation attempted")
+            
             self._update_progress(InstallationStage.STAGE_2, 100, "Stage 2 complete - XOVI activated")
             
             return True
@@ -339,6 +348,14 @@ class InstallationService:
             # Final step: Activate XOVI
             if not self._activate_xovi():
                 return False
+            self._update_progress(InstallationStage.LAUNCHER_ONLY, 95, "XOVI activated")
+
+            # Optional: Install tripletap if enabled (convenience feature)
+            if self.config.installation.enable_tripletap:
+                if not self._install_tripletap():
+                    # Don't fail the entire installation for tripletap - it's optional
+                    self._log_output("Warning: Tripletap installation failed, but continuing...")
+                self._update_progress(InstallationStage.LAUNCHER_ONLY, 98, "Tripletap installation attempted")
 
             self._update_progress(InstallationStage.LAUNCHER_ONLY, 100, "Launcher installation complete, XOVI is active")
             
@@ -787,6 +804,134 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         self._log_output("XOVI activated successfully. The launcher should be visible after UI restart.")
         return True
 
+    def _install_tripletap(self) -> bool:
+        """Install xovi-tripletap power button handler."""
+        self._log_output("Installing xovi-tripletap power button handler...")
+        
+        try:
+            # Step 1: Download tripletap archive
+            self._log_output("Downloading xovi-tripletap archive...")
+            tripletap_url = self.download_urls['xovi_tripletap']
+            tripletap_filename = "xovi-tripletap-main.zip"
+            
+            file_item = self.file_service.download_file(tripletap_url, tripletap_filename)
+            self._log_output(f"Downloaded tripletap archive ({file_item.size} bytes)")
+            
+            # Step 2: Upload archive to device
+            tripletap_file = self.config.get_downloads_directory() / tripletap_filename
+            if not self.network_service.upload_file(tripletap_file, f'/home/root/{tripletap_filename}'):
+                self._log_output("Failed to upload tripletap archive")
+                return False
+            
+            # Step 3: Create installation directory and extract
+            self._log_output("Extracting tripletap archive...")
+            result = self.network_service.execute_command(f"""
+                cd /home/root
+                mkdir -p xovi-tripletap
+                unzip -q {tripletap_filename}
+                
+                # Move files from extracted directory to installation directory
+                if [ -d "xovi-tripletap-main" ]; then
+                    SOURCE_DIR="xovi-tripletap-main"
+                else
+                    # Fallback in case directory name is different
+                    SOURCE_DIR=$(find . -maxdepth 1 -name "*tripletap*" -type d | head -1)
+                fi
+                
+                if [ -n "$SOURCE_DIR" ] && [ -d "$SOURCE_DIR" ]; then
+                    cp "$SOURCE_DIR"/* xovi-tripletap/ 2>/dev/null || true
+                    rm -rf "$SOURCE_DIR"
+                    echo "Files extracted successfully"
+                else
+                    echo "Error: Could not find extracted directory"
+                    exit 1
+                fi
+            """)
+            
+            if not result.success:
+                self._log_output(f"Tripletap extraction failed: {result.stderr}")
+                return False
+            
+            # Step 4: Detect device architecture and select appropriate evtest binary
+            self._log_output("Setting up architecture-specific evtest binary...")
+            device_type = self.device.device_type if hasattr(self.device, 'device_type') else None
+            
+            if device_type and hasattr(device_type, 'architecture'):
+                if device_type.architecture == "aarch64":
+                    evtest_arch = "arm64"
+                else:
+                    evtest_arch = "arm32"  # Default for armv6l/armv7l
+            else:
+                evtest_arch = "arm32"  # Safe default
+            
+            self._log_output(f"Using evtest binary for {evtest_arch} architecture")
+            
+            result = self.network_service.execute_command(f"""
+                cd /home/root/xovi-tripletap
+                
+                # Copy the correct evtest binary
+                cp evtest.{evtest_arch} evtest
+                chmod +x evtest
+                
+                # Set up other executable files
+                chmod +x main.sh
+                chmod +x enable.sh
+                chmod +x uninstall.sh
+                
+                # Create version file
+                echo "freeMarkable-integrated-$(date +%Y%m%d)" > version.txt
+                
+                echo "Tripletap files prepared successfully"
+            """)
+            
+            if not result.success:
+                self._log_output(f"Tripletap setup failed: {result.stderr}")
+                return False
+            
+            # Step 5: Install and enable the systemd service
+            self._log_output("Installing tripletap systemd service...")
+            result = self.network_service.execute_command("""
+                cd /home/root/xovi-tripletap
+                
+                # Check if we need to handle Paper Pro filesystem (remount for write access)
+                if grep -qE "reMarkable (Ferrari|Chiappa)" /proc/device-tree/model 2>/dev/null; then
+                    echo "Detected reMarkable Paper Pro family - remounting filesystem..."
+                    mount -o remount,rw /
+                    umount -R /etc || true
+                fi
+                
+                # Install systemd service
+                cp xovi-tripletap.service /etc/systemd/system/
+                
+                # Reload systemd and enable service
+                systemctl daemon-reload
+                systemctl enable xovi-tripletap --now
+                
+                echo "Tripletap service installed and started"
+            """)
+            
+            if not result.success:
+                self._log_output(f"Tripletap service installation failed: {result.stderr}")
+                return False
+            
+            # Step 6: Verify service is running
+            result = self.network_service.execute_command("systemctl is-active xovi-tripletap")
+            if result.success and "active" in result.stdout:
+                self._log_output("xovi-tripletap service is active and running")
+            else:
+                self._log_output("Warning: xovi-tripletap service may not be running properly")
+            
+            # Step 7: Cleanup
+            self.network_service.execute_command(f"rm -f /home/root/{tripletap_filename}")
+            
+            self._log_output("xovi-tripletap installation completed successfully!")
+            self._log_output("You can now triple-press the power button to launch XOVI")
+            return True
+            
+        except Exception as e:
+            self._log_output(f"Tripletap installation failed: {e}")
+            return False
+    
     def _final_configuration(self) -> bool:
         """Perform final cleanup and restart xochitl to activate all components."""
         self._log_output("Performing final cleanup and system restart...")
