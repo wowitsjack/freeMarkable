@@ -54,7 +54,7 @@ class MainWindow:
         
         # Create main window with reasonable default size for standard scaling
         self.root = ctk.CTk()
-        self.root.title(f"{self.config.app_name} v{self.config.version}")
+        self.root.title(self.config.app_name)
         self.root.geometry("800x700")   # Reasonable size for standard displays
         self.root.minsize(700, 600)     # Reasonable minimum size
         
@@ -181,7 +181,7 @@ class MainWindow:
         # App title
         title_label = ctk.CTkLabel(
             self.status_bar_frame,
-            text=f"🔧 {self.config.app_name} v{self.config.version}",
+            text=f"🔧 {self.config.app_name}",
             font=ctk.CTkFont(size=12)
         )
         title_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
@@ -215,6 +215,7 @@ class MainWindow:
         
         # Create tabs - reorganized for beginner-friendly main tab
         self.tabview.add("Install & Monitor")  # Main tab for beginners
+        self.tabview.add("Custom Packages")    # Custom package management
         self.tabview.add("Advanced Backup")   # Advanced backup operations
         self.tabview.add("Device Status")      # Advanced device information
         self.tabview.add("CodexCtl")           # Firmware management
@@ -222,6 +223,7 @@ class MainWindow:
         
         # Setup tab content
         self._setup_main_tab()           # Combined install + progress + logs
+        self._setup_custom_packages_tab() # Custom package management
         self._setup_backup_tab()         # Advanced backup operations
         self._setup_status_tab()         # Device status information
         self._setup_codexctl_tab()       # Firmware management
@@ -737,7 +739,26 @@ class MainWindow:
             text="• Triple-press power button to launch XOVI",
             font=ctk.CTkFont(size=11),
             text_color="gray"
-        ).pack(anchor="w", padx=35, pady=(0, 15))
+        ).pack(anchor="w", padx=35, pady=(0, 10))
+        
+        # Note about custom packages for advanced users
+        if install_type == "full":
+            custom_info_frame = ctk.CTkFrame(options_frame)
+            custom_info_frame.pack(fill="x", padx=20, pady=(0, 10))
+            
+            ctk.CTkLabel(
+                custom_info_frame,
+                text="💡 Advanced Feature Available",
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="blue"
+            ).pack(anchor="w", padx=15, pady=(15, 5))
+            
+            ctk.CTkLabel(
+                custom_info_frame,
+                text="Visit the 'Custom Packages' tab to use your own KOReader package",
+                font=ctk.CTkFont(size=11),
+                text_color="gray"
+            ).pack(anchor="w", padx=20, pady=(0, 15))
         
         # Add some spacing before buttons
         ctk.CTkLabel(content_frame, text="").pack(pady=5)
@@ -749,13 +770,22 @@ class MainWindow:
         def proceed_install():
             # Get tripletap preference
             enable_tripletap = self.tripletap_var.get()
+            
+            # Get custom package info if this is a full install
+            custom_package_path = None
+            if install_type == "full" and hasattr(self, 'custom_package_var') and self.custom_package_var.get():
+                custom_package_path = self.custom_package_path.get()
+                if custom_package_path == "No file selected" or not custom_package_path:
+                    self._update_status("Please select a custom package file first")
+                    return
+            
             dialog.destroy()
             # Immediately disable the button to prevent double-clicking
             self.full_install_button.configure(state="disabled")
             self.launcher_install_button.configure(state="disabled")
             
             if install_type == "full":
-                self._install_full_with_connect(enable_tripletap=enable_tripletap)
+                self._install_full_with_connect(enable_tripletap=enable_tripletap, custom_package_path=custom_package_path)
             else:
                 self._install_launcher_with_connect(enable_tripletap=enable_tripletap)
         
@@ -1166,8 +1196,14 @@ class MainWindow:
             self.delete_backup_button.configure(state="normal" if connected else "disabled")
         if hasattr(self, 'prune_backups_button'):
             self.prune_backups_button.configure(state="normal" if connected else "disabled")
-        if hasattr(self, 'prune_backups_button'):
-            self.prune_backups_button.configure(state="normal" if connected else "disabled")
+        
+        # Built-in package buttons
+        if hasattr(self, 'install_koreader_button'):
+            self.install_koreader_button.configure(state="normal" if connected else "disabled")
+        if hasattr(self, 'install_literm_button'):
+            self.install_literm_button.configure(state="normal" if connected else "disabled")
+        if hasattr(self, 'install_package_button'):
+            self.install_package_button.configure(state="normal" if connected else "disabled")
         
         # Status refresh button
         if hasattr(self, 'refresh_button'):
@@ -2425,10 +2461,10 @@ SUPPORT:
 
     # Auto-connect wrapper methods for seamless UX
     
-    def _install_full_with_connect(self, enable_tripletap: bool = False) -> None:
+    def _install_full_with_connect(self, enable_tripletap: bool = False, custom_package_path: str = None) -> None:
         """Install full with auto-connect."""
         if self._ensure_connected():
-            self._install_full(enable_tripletap=enable_tripletap)
+            self._install_full(enable_tripletap=enable_tripletap, custom_package_path=custom_package_path)
     
     def _install_launcher_with_connect(self, enable_tripletap: bool = False) -> None:
         """Install launcher with auto-connect."""
@@ -2644,6 +2680,980 @@ SUPPORT:
         except Exception as e:
             self._update_status(f"Connection failed: {e}")
             return False
+    
+    def _setup_custom_packages_tab(self) -> None:
+        """Setup custom packages management tab."""
+        packages_tab = self.tabview.tab("Custom Packages")
+        packages_tab.grid_columnconfigure(0, weight=1)
+        packages_tab.grid_rowconfigure(0, weight=1)
+        
+        # Main scrollable frame
+        main_frame = ctk.CTkScrollableFrame(packages_tab, label_text="Custom Package Management")
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Information section
+        info_frame = ctk.CTkFrame(main_frame)
+        info_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            info_frame,
+            text="📦 Custom Application Manager (Work in Progress)",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=(15, 5))
+        
+        ctk.CTkLabel(
+            info_frame,
+            text="Install custom applications into your existing XOVI/AppLoad system",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        ).pack(pady=(0, 15))
+        
+        # Prerequisites check
+        prereq_frame = ctk.CTkFrame(main_frame)
+        prereq_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            prereq_frame,
+            text="⚠️ Prerequisites",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="orange"
+        ).pack(anchor="w", padx=15, pady=(15, 5))
+        
+        prereq_text = "• XOVI and AppLoad must already be installed on your device\n• Device must be connected via USB or WiFi\n• Custom packages must be valid ZIP files containing applications"
+        
+        ctk.CTkLabel(
+            prereq_frame,
+            text=prereq_text,
+            font=ctk.CTkFont(size=11),
+            justify="left"
+        ).pack(anchor="w", padx=20, pady=(0, 15))
+        
+        # Built-in packages section
+        builtin_frame = ctk.CTkFrame(main_frame)
+        builtin_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            builtin_frame,
+            text="📚 Pre-Built Packages",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(15, 10))
+        
+        ctk.CTkLabel(
+            builtin_frame,
+            text="Popular applications ready to install",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        ).pack(anchor="w", padx=15, pady=(0, 10))
+        
+        # Built-in package buttons
+        builtin_buttons_frame = ctk.CTkFrame(builtin_frame, fg_color="transparent")
+        builtin_buttons_frame.pack(fill="x", padx=15, pady=(0, 15))
+        
+        # KOReader button
+        self.install_koreader_button = ctk.CTkButton(
+            builtin_buttons_frame,
+            text="📖 Install KOReader\n(Latest Version)",
+            command=self._install_builtin_koreader,
+            width=180,
+            height=50,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#2E8B57",
+            hover_color="#238B45"
+        )
+        self.install_koreader_button.pack(side="left", padx=(0, 10))
+        
+        # literm button
+        self.install_literm_button = ctk.CTkButton(
+            builtin_buttons_frame,
+            text="💻 Install rm-literm\n(Terminal Emulator)",
+            command=self._install_builtin_literm,
+            width=180,
+            height=50,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#4169E1",
+            hover_color="#3654D1"
+        )
+        self.install_literm_button.pack(side="left", padx=5)
+        
+        # Built-in packages info
+        builtin_info_frame = ctk.CTkFrame(builtin_frame)
+        builtin_info_frame.pack(fill="x", padx=15, pady=(0, 15))
+        
+        ctk.CTkLabel(
+            builtin_info_frame,
+            text="ℹ️ About Pre-Built Packages",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="blue"
+        ).pack(anchor="w", padx=15, pady=(10, 5))
+        
+        builtin_info_text = "• KOReader: Advanced PDF/EPUB reader with extensive features\n• rm-literm: Terminal emulator specifically built for reMarkable devices\n• These packages are tested and optimized for your device"
+        
+        ctk.CTkLabel(
+            builtin_info_frame,
+            text=builtin_info_text,
+            font=ctk.CTkFont(size=10),
+            justify="left"
+        ).pack(anchor="w", padx=20, pady=(0, 10))
+        
+        # Package installation section
+        install_frame = ctk.CTkFrame(main_frame)
+        install_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            install_frame,
+            text="📥 Install Custom Package",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(15, 10))
+        
+        # File selection
+        file_selection_frame = ctk.CTkFrame(install_frame, fg_color="transparent")
+        file_selection_frame.pack(fill="x", padx=15, pady=5)
+        
+        self.custom_app_path = tk.StringVar(value="No package selected")
+        self.custom_app_label = ctk.CTkLabel(
+            file_selection_frame,
+            textvariable=self.custom_app_path,
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        self.custom_app_label.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        ctk.CTkButton(
+            file_selection_frame,
+            text="Browse Package...",
+            command=self._browse_custom_package,
+            width=130,
+            height=30,
+            state="disabled",
+            fg_color="gray",
+            hover_color="gray"
+        ).pack(side="right")
+        
+        # Install button
+        install_button_frame = ctk.CTkFrame(install_frame, fg_color="transparent")
+        install_button_frame.pack(fill="x", padx=15, pady=(10, 15))
+        
+        self.install_package_button = ctk.CTkButton(
+            install_button_frame,
+            text="🚀 Install Package",
+            command=self._install_custom_package,
+            width=200,
+            height=40,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            state="disabled",
+            fg_color="gray",
+            hover_color="gray"
+        )
+        self.install_package_button.pack(side="left", padx=(0, 10))
+        
+        # Package requirements help
+        ctk.CTkButton(
+            install_button_frame,
+            text="📖 Package Requirements",
+            command=self._show_custom_package_help,
+            width=170,
+            height=40,
+            font=ctk.CTkFont(size=11),
+            fg_color="gray",
+            hover_color="#606060",
+            state="disabled"
+        ).pack(side="left")
+        
+        # Package management section
+        manage_frame = ctk.CTkFrame(main_frame)
+        manage_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            manage_frame,
+            text="🗂️ Package Management",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(anchor="w", padx=15, pady=(15, 10))
+        
+        # Management buttons
+        manage_buttons_frame = ctk.CTkFrame(manage_frame, fg_color="transparent")
+        manage_buttons_frame.pack(fill="x", padx=15, pady=(0, 15))
+        
+        ctk.CTkButton(
+            manage_buttons_frame,
+            text="📋 List Installed Apps",
+            command=self._list_installed_packages,
+            width=160,
+            height=35,
+            state="disabled",
+            fg_color="gray",
+            hover_color="gray"
+        ).pack(side="left", padx=(0, 10))
+        
+        ctk.CTkButton(
+            manage_buttons_frame,
+            text="🗑️ Remove Package",
+            command=self._remove_custom_package,
+            width=150,
+            height=35,
+            fg_color="gray",
+            hover_color="gray",
+            state="disabled"
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            manage_buttons_frame,
+            text="🔄 Restart AppLoad",
+            command=self._restart_appload,
+            width=140,
+            height=35,
+            fg_color="gray",
+            hover_color="gray",
+            state="disabled"
+        ).pack(side="left", padx=5)
+    
+    def _browse_custom_package(self) -> None:
+        """Browse for custom package file."""
+        from tkinter import filedialog
+        
+        # File dialog for ZIP files
+        file_path = filedialog.askopenfilename(
+            title="Select Custom Package",
+            filetypes=[
+                ("ZIP files", "*.zip"),
+                ("All files", "*.*")
+            ],
+            initialdir=str(Path.home())
+        )
+        
+        if file_path:
+            self.custom_app_path.set(file_path)
+            self._update_status(f"Selected package: {Path(file_path).name}")
+        else:
+            self.custom_app_path.set("No package selected")
+    
+    def _install_custom_package(self) -> None:
+        """Install the selected custom package."""
+        if not self._ensure_connected():
+            return
+        
+        package_path = self.custom_app_path.get()
+        if package_path == "No package selected" or not package_path:
+            self._update_status("Please select a package file first")
+            return
+        
+        if not Path(package_path).exists():
+            self._update_status("Selected package file does not exist")
+            return
+        
+        # Validate package format
+        if not self._validate_custom_package(package_path):
+            return
+        
+        self._update_status("Installing custom package...")
+        self.is_operation_running = True
+        self._update_operation_buttons(False)
+        
+        def run_package_install():
+            try:
+                success = self._execute_custom_package_install(package_path)
+                
+                if success:
+                    self.root.after(0, lambda: self._package_install_complete(True, f"Package installed successfully"))
+                else:
+                    self.root.after(0, lambda: self._package_install_complete(False, "Package installation failed"))
+                    
+            except Exception as e:
+                self.logger.error(f"Package installation failed: {e}")
+                self.root.after(0, lambda: self._package_install_complete(False, f"Installation failed: {e}"))
+        
+        threading.Thread(target=run_package_install, daemon=True).start()
+    
+    def _validate_custom_package(self, package_path: str) -> bool:
+        """Validate custom package format and contents."""
+        try:
+            import zipfile
+            
+            if not package_path.lower().endswith('.zip'):
+                self._update_status("Package must be a ZIP file")
+                return False
+            
+            # Check if it's a valid ZIP file
+            try:
+                with zipfile.ZipFile(package_path, 'r') as zip_ref:
+                    file_list = zip_ref.namelist()
+            except zipfile.BadZipFile:
+                self._update_status("Invalid ZIP file format")
+                return False
+            
+            # Basic validation - should contain some files
+            if not file_list:
+                self._update_status("Package is empty")
+                return False
+            
+            self.logger.info(f"Package validation passed: {len(file_list)} files found")
+            return True
+            
+        except Exception as e:
+            self._update_status(f"Package validation failed: {e}")
+            return False
+    
+    def _execute_custom_package_install(self, package_path: str) -> bool:
+        """Execute the custom package installation."""
+        try:
+            package_name = Path(package_path).stem
+            self._update_status(f"Installing package: {package_name}")
+            
+            # Get network service
+            from ..services.network_service import get_network_service
+            network_service = get_network_service()
+            
+            # Upload package to device
+            remote_path = f'/home/root/{Path(package_path).name}'
+            if not network_service.upload_file(Path(package_path), remote_path):
+                self._update_status("Failed to upload package to device")
+                return False
+            
+            # Install package following AppLoad pattern
+            result = network_service.execute_command(f"""
+                cd /home/root
+                
+                # Check if AppLoad directory exists
+                if [ ! -d "/home/root/xovi/exthome/appload" ]; then
+                    echo "ERROR: AppLoad directory not found. Please install XOVI first."
+                    exit 1
+                fi
+                
+                # Extract package to temporary directory
+                TEMP_DIR="/tmp/custom_package_$$"
+                mkdir -p "$TEMP_DIR"
+                
+                # Extract the package
+                unzip -q "{Path(package_path).name}" -d "$TEMP_DIR"
+                
+                # Find the main directory in the package
+                cd "$TEMP_DIR"
+                
+                # Look for a single directory or install directly
+                if [ $(ls -1 | wc -l) -eq 1 ] && [ -d "$(ls -1)" ]; then
+                    # Single directory - move its contents
+                    APP_SOURCE="$(ls -1)"
+                    APP_NAME="$APP_SOURCE"
+                else
+                    # Multiple files/dirs - create wrapper directory
+                    APP_NAME="{package_name}"
+                    mkdir -p "$APP_NAME"
+                    mv * "$APP_NAME/" 2>/dev/null || true
+                    APP_SOURCE="$APP_NAME"
+                fi
+                
+                # Install to AppLoad directory
+                TARGET_DIR="/home/root/xovi/exthome/appload/$APP_NAME"
+                
+                # Remove existing installation if present
+                rm -rf "$TARGET_DIR" 2>/dev/null || true
+                
+                # Move to final location
+                mv "$APP_SOURCE" "/home/root/xovi/exthome/appload/"
+                
+                # Set permissions
+                chmod -R 755 "$TARGET_DIR"
+                
+                # Cleanup
+                cd /home/root
+                rm -rf "$TEMP_DIR"
+                rm -f "{Path(package_path).name}"
+                
+                echo "Package '$APP_NAME' installed successfully to AppLoad"
+                echo "Installed to: $TARGET_DIR"
+                
+                # List contents
+                echo "Package contents:"
+                ls -la "$TARGET_DIR"
+            """)
+            
+            if not result.success:
+                self._update_status(f"Package installation failed: {result.stderr}")
+                return False
+            
+            self._update_status(f"Package '{package_name}' installed successfully")
+            self.logger.info(f"Custom package installation completed: {package_name}")
+            return True
+            
+        except Exception as e:
+            self._update_status(f"Package installation error: {e}")
+            return False
+    
+    def _package_install_complete(self, success: bool, message: str) -> None:
+        """Handle package installation completion."""
+        self.is_operation_running = False
+        self._update_operation_buttons(self.device and self.device.is_connected())
+        
+        if success:
+            self._update_status(message)
+            # Clear the selected package
+            self.custom_app_path.set("No package selected")
+        else:
+            self._update_status(f"Installation failed: {message}")
+    
+    def _show_custom_package_help(self) -> None:
+        """Show comprehensive help about package requirements."""
+        help_dialog = ctk.CTkToplevel(self.root)
+        help_dialog.title("Custom Package Requirements")
+        help_dialog.geometry("700x600")
+        help_dialog.resizable(True, True)
+        
+        # Center the dialog
+        help_dialog.update_idletasks()
+        x = (help_dialog.winfo_screenwidth() // 2) - (700 // 2)
+        y = (help_dialog.winfo_screenheight() // 2) - (600 // 2)
+        help_dialog.geometry(f"700x600+{x}+{y}")
+        
+        # Make it modal
+        help_dialog.transient(self.root)
+        help_dialog.grab_set()
+        
+        # Create help content
+        content_frame = ctk.CTkFrame(help_dialog)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="📖 Custom Package Requirements Guide",
+            font=ctk.CTkFont(size=18, weight="bold")
+        )
+        title_label.pack(pady=(0, 20))
+        
+        # Help content in scrollable text box
+        help_text = ctk.CTkTextbox(content_frame, wrap="word")
+        help_text.pack(fill="both", expand=True, pady=(0, 20))
+        
+        help_content = """
+CUSTOM PACKAGE REQUIREMENTS
+
+This feature allows you to install custom applications into your existing XOVI/AppLoad system.
+
+📋 PREREQUISITES:
+• XOVI and AppLoad must already be installed on your device
+• Device must be connected via USB or WiFi
+• You must have completed a Full Install or Launcher Install first
+
+📦 PACKAGE FORMAT:
+• Must be a ZIP file (.zip extension)
+• Can contain a single application directory or multiple files
+• No specific internal structure required - the installer will adapt
+
+🏗️ HOW IT WORKS:
+1. Your ZIP file is uploaded to the device
+2. Contents are extracted to /home/root/xovi/exthome/appload/
+3. Permissions are set automatically
+4. The app becomes available in AppLoad launcher
+
+📁 PACKAGE STRUCTURE EXAMPLES:
+
+Example 1 - Simple Application:
+my-app.zip
+└── my-app/
+   ├── main.py
+   ├── config.json
+   └── assets/
+       └── icon.png
+
+Example 2 - Complex Application (like KOReader):
+complex-app.zip
+└── complex-app/
+   ├── main.lua
+   ├── defaults.lua
+   ├── frontend/
+   │   └── ui/
+   ├── plugins/
+   │   └── myplugin.koplugin/
+   │       ├── _meta.lua
+   │       └── main.lua
+   ├── fonts/
+   ├── l10n/
+   └── resources/
+
+Example 3 - Multiple Files (will be wrapped):
+my-tool.zip
+├── run.sh
+├── README.txt
+└── data.json
+
+🎯 APPLOAD INTEGRATION:
+• Apps are installed to: /home/root/xovi/exthome/appload/[app-name]/
+• AppLoad will detect and list your custom applications
+• Use "Restart AppLoad" button to refresh the launcher
+• Apps can be launched through the AppLoad interface
+
+⚠️ IMPORTANT NOTES:
+• Ensure your app is compatible with reMarkable hardware
+• Test apps thoroughly before distribution
+• Custom apps should follow reMarkable development guidelines
+• This feature is for post-installation app management only
+
+🔧 TROUBLESHOOTING:
+• If app doesn't appear: Try "Restart AppLoad" button
+• Check "List Installed Apps" to verify installation
+• Use "Remove Package" to uninstall if needed
+• Ensure XOVI/AppLoad is properly installed first
+
+📚 APPLOAD MANIFEST SYSTEM - CRITICAL:
+AppLoad applications require a specific structure with these ESSENTIAL files:
+
+1. EXTERNAL MANIFEST (Required):
+   external.manifest.json - Tells AppLoad how to launch your app
+   Example structure:
+   {
+     "name": "Your App Name",
+     "application": "launcher.sh",
+     "environment": {
+       "VARIABLE": "value"
+     },
+     "qtfb": true
+   }
+
+2. LAUNCHER SCRIPT (Required):
+   A shell script (.sh) that starts your application
+   Must be executable and handle environment setup
+
+REAL KOREADER EXAMPLE:
+• Manifest: external.manifest.json
+  - name: "KOReader"
+  - application: "koreader.sh"
+  - environment: LD_PRELOAD, KO_DONT_GRAB_INPUT
+  - qtfb: true flag for Qt framebuffer apps
+
+• Launcher: koreader.sh
+  - Sets working directory
+  - Handles reMarkable 2 RM2FB requirements
+  - Exports environment variables
+  - Executes the actual application
+
+CRITICAL REQUIREMENTS:
+• external.manifest.json must be in app root directory
+• Launcher script must be executable (chmod +x)
+• Environment variables properly configured
+• For Qt apps: qtfb=true and proper shim setup
+
+For technical support and examples, visit the freeMarkable GitHub repository.
+        """
+        
+        help_text.insert("1.0", help_content)
+        help_text.configure(state="disabled")
+        
+        # Close button
+        ctk.CTkButton(content_frame, text="Close", command=help_dialog.destroy).pack()
+        
+        self.logger.info("Custom package help dialog opened")
+    
+    def _list_installed_packages(self) -> None:
+        """List all installed applications in AppLoad."""
+        if not self._ensure_connected():
+            return
+        
+        self._update_status("Listing installed applications...")
+        
+        def list_packages():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                result = network_service.execute_command("""
+                    if [ ! -d "/home/root/xovi/exthome/appload" ]; then
+                        echo "ERROR: AppLoad directory not found. Please install XOVI first."
+                        exit 1
+                    fi
+                    
+                    cd /home/root/xovi/exthome/appload
+                    
+                    echo "=== INSTALLED APPLICATIONS ==="
+                    echo ""
+                    
+                    if [ -z "$(ls -A 2>/dev/null)" ]; then
+                        echo "No applications found in AppLoad directory"
+                        exit 0
+                    fi
+                    
+                    for app_dir in */; do
+                        if [ -d "$app_dir" ]; then
+                            app_name="${app_dir%/}"
+                            echo "📱 $app_name"
+                            echo "   Path: /home/root/xovi/exthome/appload/$app_name"
+                            
+                            # Get size
+                            size=$(du -sh "$app_dir" 2>/dev/null | cut -f1)
+                            echo "   Size: $size"
+                            
+                            # Count files
+                            file_count=$(find "$app_dir" -type f 2>/dev/null | wc -l)
+                            echo "   Files: $file_count"
+                            
+                            # Check for common executable files
+                            if [ -f "$app_dir/main.py" ]; then
+                                echo "   Type: Python Application"
+                            elif [ -f "$app_dir/run.sh" ] || [ -f "$app_dir/start.sh" ]; then
+                                echo "   Type: Shell Script Application"
+                            elif find "$app_dir" -name "*.so" -o -name "*.bin" | head -1 | grep -q .; then
+                                echo "   Type: Native Binary Application"
+                            else
+                                echo "   Type: Unknown"
+                            fi
+                            
+                            echo ""
+                        fi
+                    done
+                    
+                    echo "=== APPLOAD STATUS ==="
+                    if pgrep -f "appload" > /dev/null; then
+                        echo "AppLoad: Running"
+                    else
+                        echo "AppLoad: Not detected (may be integrated with XOVI)"
+                    fi
+                """)
+                
+                if result.success:
+                    self.root.after(0, lambda: self._show_package_list_dialog(result.stdout))
+                else:
+                    self.root.after(0, lambda: self._update_status(f"Failed to list packages: {result.stderr}"))
+                    
+            except Exception as e:
+                self.logger.error(f"Package listing failed: {e}")
+                self.root.after(0, lambda: self._update_status(f"Package listing failed: {e}"))
+        
+        threading.Thread(target=list_packages, daemon=True).start()
+    
+    def _show_package_list_dialog(self, package_info: str) -> None:
+        """Show dialog with installed package information."""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("Installed Applications")
+        dialog.geometry("600x500")
+        dialog.resizable(True, True)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (500 // 2)
+        dialog.geometry(f"600x500+{x}+{y}")
+        
+        # Make it modal
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        content_frame = ctk.CTkFrame(dialog)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="📋 Installed Applications",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        title_label.pack(pady=(0, 15))
+        
+        # Package list
+        list_text = ctk.CTkTextbox(content_frame, wrap="word")
+        list_text.pack(fill="both", expand=True, pady=(0, 15))
+        
+        list_text.insert("1.0", package_info)
+        list_text.configure(state="disabled")
+        
+        ctk.CTkButton(content_frame, text="Close", command=dialog.destroy).pack()
+    
+    def _remove_custom_package(self) -> None:
+        """Remove a custom package from AppLoad."""
+        if not self._ensure_connected():
+            return
+        
+        # First get list of installed packages for selection
+        def get_packages_for_removal():
+            try:
+                result = self.network_service.execute_command("""
+                    if [ ! -d "/home/root/xovi/exthome/appload" ]; then
+                        echo "ERROR: AppLoad directory not found"
+                        exit 1
+                    fi
+                    
+                    cd /home/root/xovi/exthome/appload
+                    for app_dir in */; do
+                        if [ -d "$app_dir" ]; then
+                            echo "${app_dir%/}"
+                        fi
+                    done
+                """)
+                
+                if result.success:
+                    packages = [pkg.strip() for pkg in result.stdout.strip().split('\n') if pkg.strip()]
+                    if packages:
+                        self.root.after(0, lambda: self._show_package_removal_dialog(packages))
+                    else:
+                        self.root.after(0, lambda: self._update_status("No packages found to remove"))
+                else:
+                    self.root.after(0, lambda: self._update_status(f"Failed to list packages: {result.stderr}"))
+                    
+            except Exception as e:
+                self.logger.error(f"Package listing for removal failed: {e}")
+                self.root.after(0, lambda: self._update_status(f"Failed to get package list: {e}"))
+        
+        threading.Thread(target=get_packages_for_removal, daemon=True).start()
+        self._update_status("Getting package list...")
+    
+    def _show_package_removal_dialog(self, packages: list) -> None:
+        """Show dialog to select package for removal."""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("Remove Package")
+        dialog.geometry("400x300")
+        dialog.resizable(False, False)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (400 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (300 // 2)
+        dialog.geometry(f"400x300+{x}+{y}")
+        
+        # Make it modal
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        content_frame = ctk.CTkFrame(dialog)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="🗑️ Remove Package",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="red"
+        )
+        title_label.pack(pady=(0, 15))
+        
+        ctk.CTkLabel(
+            content_frame,
+            text="Select a package to remove:",
+            font=ctk.CTkFont(size=12)
+        ).pack(pady=(0, 10))
+        
+        # Package selection
+        selected_package = tk.StringVar()
+        
+        for package in packages:
+            radio = ctk.CTkRadioButton(
+                content_frame,
+                text=package,
+                variable=selected_package,
+                value=package
+            )
+            radio.pack(anchor="w", padx=20, pady=2)
+        
+        # Warning
+        warning_label = ctk.CTkLabel(
+            content_frame,
+            text="⚠️ This action cannot be undone!",
+            font=ctk.CTkFont(size=11),
+            text_color="orange"
+        )
+        warning_label.pack(pady=(15, 10))
+        
+        # Buttons
+        button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        button_frame.pack(fill="x", pady=(10, 0))
+        
+        def execute_removal():
+            package_name = selected_package.get()
+            if not package_name:
+                self._update_status("No package selected")
+                return
+            
+            dialog.destroy()
+            self._execute_package_removal(package_name)
+        
+        ctk.CTkButton(
+            button_frame,
+            text="Remove",
+            command=execute_removal,
+            fg_color="#8b2635",
+            hover_color="#6b1c28"
+        ).pack(side="right", padx=(5, 0))
+        
+        ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            command=dialog.destroy
+        ).pack(side="right")
+    
+    def _execute_package_removal(self, package_name: str) -> None:
+        """Execute package removal."""
+        self._update_status(f"Removing package: {package_name}")
+        
+        def remove_package():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                result = network_service.execute_command(f"""
+                    cd /home/root/xovi/exthome/appload
+                    
+                    if [ ! -d "{package_name}" ]; then
+                        echo "Package '{package_name}' not found"
+                        exit 1
+                    fi
+                    
+                    # Remove the package directory
+                    rm -rf "{package_name}"
+                    
+                    echo "Package '{package_name}' removed successfully"
+                """)
+                
+                if result.success:
+                    self.root.after(0, lambda: self._update_status(f"Package '{package_name}' removed successfully"))
+                else:
+                    self.root.after(0, lambda: self._update_status(f"Failed to remove package: {result.stderr}"))
+                    
+            except Exception as e:
+                self.logger.error(f"Package removal failed: {e}")
+                self.root.after(0, lambda: self._update_status(f"Package removal failed: {e}"))
+        
+        threading.Thread(target=remove_package, daemon=True).start()
+    
+    def _restart_appload(self) -> None:
+        """Restart AppLoad system to refresh application list."""
+        if not self._ensure_connected():
+            return
+        
+        self._update_status("Restarting AppLoad system...")
+        
+        def restart_appload():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                result = network_service.execute_command("""
+                    echo "Restarting AppLoad system..."
+                    
+                    # Method 1: Try restarting xochitl service (which includes XOVI/AppLoad)
+                    systemctl restart xochitl
+                    
+                    # Wait a moment for restart
+                    sleep 3
+                    
+                    # Check if xochitl is running
+                    if systemctl is-active xochitl >/dev/null 2>&1; then
+                        echo "AppLoad system restarted successfully"
+                        echo "Applications should now be refreshed in the launcher"
+                    else
+                        echo "Warning: xochitl service may not have restarted properly"
+                        echo "You may need to restart your device manually"
+                    fi
+                """)
+                
+                if result.success:
+                    self.root.after(0, lambda: self._update_status("AppLoad system restarted - applications refreshed"))
+                else:
+                    self.root.after(0, lambda: self._update_status(f"AppLoad restart failed: {result.stderr}"))
+                    
+            except Exception as e:
+                self.logger.error(f"AppLoad restart failed: {e}")
+                self.root.after(0, lambda: self._update_status(f"AppLoad restart failed: {e}"))
+        
+        threading.Thread(target=restart_appload, daemon=True).start()
+    
+    def _install_builtin_koreader(self) -> None:
+        """Install KOReader using the built-in package system."""
+        if not self._ensure_connected():
+            return
+        
+        self._update_status("Installing KOReader...")
+        self.is_operation_running = True
+        self._update_operation_buttons(False)
+        
+        def run_koreader_install():
+            try:
+                from ..services.installation_service import get_installation_service
+                installation_service = get_installation_service()
+                
+                # Set up progress callbacks
+                def progress_callback(progress):
+                    percentage = progress.progress_percentage
+                    message = progress.message
+                    stage = progress.stage
+                    current_step = progress.current_step
+                    
+                    self.root.after(0, lambda p=percentage, m=message:
+                        self.progress_panel.update_overall_progress(p, m))
+                    self.root.after(0, lambda s=stage, p=percentage, c=current_step:
+                        self.progress_panel.update_stage_progress(s, p, c))
+                
+                def output_callback(message):
+                    msg = str(message)
+                    self.root.after(0, lambda m=msg: self.logger.info(m))
+                
+                installation_service.set_progress_callback(progress_callback)
+                installation_service.set_output_callback(output_callback)
+                
+                # Start progress tracking
+                self.root.after(0, lambda: self.progress_panel.start_operation("KOReader Installation"))
+                
+                # Run KOReader-only installation
+                success = installation_service.install_koreader_only()
+                
+                # Update UI in main thread
+                self.root.after(0, lambda: self._builtin_install_complete(success, "KOReader installation"))
+                
+            except Exception as e:
+                self.logger.error(f"KOReader installation failed: {e}")
+                self.root.after(0, lambda: self._builtin_install_complete(False, f"KOReader installation failed: {e}"))
+        
+        threading.Thread(target=run_koreader_install, daemon=True).start()
+    
+    def _install_builtin_literm(self) -> None:
+        """Install rm-literm using the built-in package system."""
+        if not self._ensure_connected():
+            return
+        
+        self._update_status("Installing rm-literm...")
+        self.is_operation_running = True
+        self._update_operation_buttons(False)
+        
+        def run_literm_install():
+            try:
+                from ..services.installation_service import get_installation_service
+                installation_service = get_installation_service()
+                
+                # Set up progress callbacks
+                def progress_callback(progress):
+                    percentage = progress.progress_percentage
+                    message = progress.message
+                    stage = progress.stage
+                    current_step = progress.current_step
+                    
+                    self.root.after(0, lambda p=percentage, m=message:
+                        self.progress_panel.update_overall_progress(p, m))
+                    self.root.after(0, lambda s=stage, p=percentage, c=current_step:
+                        self.progress_panel.update_stage_progress(s, p, c))
+                
+                def output_callback(message):
+                    msg = str(message)
+                    self.root.after(0, lambda m=msg: self.logger.info(m))
+                
+                installation_service.set_progress_callback(progress_callback)
+                installation_service.set_output_callback(output_callback)
+                
+                # Start progress tracking
+                self.root.after(0, lambda: self.progress_panel.start_operation("rm-literm Installation"))
+                
+                # Run rm-literm installation
+                success = installation_service.install_literm_only()
+                
+                # Update UI in main thread
+                self.root.after(0, lambda: self._builtin_install_complete(success, "rm-literm installation"))
+                
+            except Exception as e:
+                self.logger.error(f"rm-literm installation failed: {e}")
+                self.root.after(0, lambda: self._builtin_install_complete(False, f"rm-literm installation failed: {e}"))
+        
+        threading.Thread(target=run_literm_install, daemon=True).start()
+    
+    def _builtin_install_complete(self, success: bool, operation_name: str) -> None:
+        """Handle built-in package installation completion."""
+        self.is_operation_running = False
+        self._update_operation_buttons(self.device and self.device.is_connected())
+        
+        if success:
+            self._update_status(f"{operation_name} completed successfully")
+            self.progress_panel.complete_operation(True, f"{operation_name} completed successfully")
+        else:
+            self._update_status(f"{operation_name} failed")
+            self.progress_panel.complete_operation(False, f"{operation_name} failed")
 
 
 def main():

@@ -241,6 +241,180 @@ class XOVIInstallerApp:
             self.logger.debug(traceback.format_exc())
             return False
     
+    def run_cli_custom_package_install(self, package_path: str) -> bool:
+        """Install custom package in CLI mode."""
+        try:
+            from pathlib import Path
+            import zipfile
+            import tempfile
+            import shutil
+            
+            self.logger.info(f"Installing custom package: {package_path}")
+            
+            # Set up network service
+            if not self._setup_network_connection():
+                return False
+            
+            # Get network service for use in this method
+            network_service = get_network_service()
+            
+            # Validate package path
+            package_path_obj = Path(package_path)
+            if not package_path_obj.exists():
+                self.logger.error(f"Package path does not exist: {package_path}")
+                return False
+            
+            # Handle directory or ZIP file
+            temp_extract_dir = None
+            if package_path_obj.is_file() and package_path_obj.suffix.lower() == '.zip':
+                # Extract ZIP to temporary directory
+                temp_extract_dir = tempfile.mkdtemp()
+                self.logger.info(f"Extracting ZIP to temporary directory: {temp_extract_dir}")
+                with zipfile.ZipFile(package_path_obj, 'r') as zip_ref:
+                    zip_ref.extractall(temp_extract_dir)
+                source_dir = Path(temp_extract_dir)
+            elif package_path_obj.is_dir():
+                source_dir = package_path_obj
+            else:
+                self.logger.error(f"Package must be a ZIP file or directory: {package_path}")
+                return False
+            
+            try:
+                # Find the actual package directory (may be nested)
+                # Only drill down if there's exactly one directory and no other significant files
+                package_dirs = [d for d in source_dir.iterdir() if d.is_dir()]
+                other_files = [f for f in source_dir.iterdir() if f.is_file() and f.suffix in ['.so', '.xovi']]
+                
+                if len(package_dirs) == 1 and len(other_files) == 0:
+                    # Only one directory and no significant files, likely a wrapper directory
+                    actual_source = package_dirs[0]
+                else:
+                    # Multiple directories or significant files present, use this directory
+                    actual_source = source_dir
+                
+                self.logger.info(f"Using package directory: {actual_source}")
+                
+                # Validate package structure (look for appload-app directory with .so files inside)
+                appload_dirs = [d for d in actual_source.iterdir() if d.name == 'appload-app' and d.is_dir()]
+                
+                if not appload_dirs:
+                    self.logger.error("Package validation failed: No appload-app directory found")
+                    return False
+                
+                # Check for .so files inside appload-app directory
+                appload_dir = appload_dirs[0]
+                so_files = list(appload_dir.glob('*.so'))
+                
+                if not so_files:
+                    self.logger.error("Package validation failed: No .so files found in appload-app directory")
+                    return False
+                
+                self.logger.info(f"Package validation passed: Found {len(so_files)} .so files and appload-app directory")
+                
+                # Upload .so files to device
+                for so_file in so_files:
+                    self.logger.info(f"Uploading {so_file.name}...")
+                    if not network_service.upload_file(so_file, f'/home/root/{so_file.name}'):
+                        self.logger.error(f"Failed to upload {so_file.name}")
+                        return False
+                
+                # Upload and extract appload-app directory
+                appload_dir = appload_dirs[0]
+                app_dirs = [d for d in appload_dir.iterdir() if d.is_dir()]
+                
+                for app_dir in app_dirs:
+                    app_name = app_dir.name
+                    self.logger.info(f"Installing application: {app_name}")
+                    
+                    # Create temporary zip of app directory
+                    temp_zip = tempfile.NamedTemporaryFile(suffix='.zip', delete=False)
+                    temp_zip_path = Path(temp_zip.name)
+                    temp_zip.close()
+                    
+                    # Create ZIP of app directory
+                    shutil.make_archive(str(temp_zip_path.with_suffix('')), 'zip', app_dir.parent, app_dir.name)
+                    
+                    # Upload app zip to device
+                    if not network_service.upload_file(temp_zip_path, f'/home/root/{app_name}.zip'):
+                        self.logger.error(f"Failed to upload {app_name} app")
+                        temp_zip_path.unlink()
+                        return False
+                    
+                    # Extract app on device
+                    result = network_service.execute_command(f"""
+                        cd /home/root
+                        mkdir -p /home/root/xovi/exthome/appload
+                        cd /home/root/xovi/exthome/appload
+                        rm -rf {app_name} 2>/dev/null || true
+                        unzip -o /home/root/{app_name}.zip
+                        rm -f /home/root/{app_name}.zip
+                        echo "Application {app_name} installed successfully"
+                    """)
+                    
+                    if not result.success:
+                        self.logger.error(f"Failed to extract {app_name}: {result.stderr}")
+                        temp_zip_path.unlink()
+                        return False
+                    
+                    self.logger.info(f"Application {app_name} installed successfully")
+                    temp_zip_path.unlink()
+                
+                # Install .so files to XOVI extensions directory
+                for so_file in so_files:
+                    result = network_service.execute_command(f"""
+                        cd /home/root
+                        cp {so_file.name} /home/root/xovi/extensions.d/
+                        chmod +x /home/root/xovi/extensions.d/{so_file.name}
+                        rm -f {so_file.name}
+                        echo "Extension {so_file.name} installed"
+                    """)
+                    
+                    if not result.success:
+                        self.logger.error(f"Failed to install extension {so_file.name}: {result.stderr}")
+                        return False
+                    
+                    self.logger.info(f"Extension {so_file.name} installed successfully")
+                
+                # Restart AppLoad to refresh application list
+                self.logger.info("Restarting AppLoad to refresh application list...")
+                result = network_service.execute_command("systemctl restart xochitl")
+                if not result.success:
+                    self.logger.warning("AppLoad restart failed, but installation completed successfully")
+                else:
+                    self.logger.info("AppLoad restarted successfully")
+                
+                self.logger.info("Custom package installation completed successfully!")
+                return True
+                
+            finally:
+                # Clean up temporary directory
+                if temp_extract_dir:
+                    shutil.rmtree(temp_extract_dir, ignore_errors=True)
+            
+        except Exception as e:
+            self.logger.error(f"Custom package installation failed: {e}")
+            self.logger.debug(traceback.format_exc())
+            return False
+    
+    def _setup_network_connection(self) -> bool:
+        """Setup network connection to device."""
+        if not self.device.is_configured():
+            self.logger.error("Device not configured properly")
+            return False
+        
+        network_service = get_network_service()
+        network_service.set_connection_details(
+            hostname=self.device.ip_address,
+            password=self.device.ssh_password
+        )
+        
+        if not network_service.connect():
+            self.logger.error("Failed to connect to device")
+            return False
+        
+        self.logger.info("Connected to device successfully")
+        return True
+    
     def run_gui_mode(self) -> bool:
         """Run the application in GUI mode."""
         try:
@@ -401,6 +575,13 @@ Installation Types:
         help='Enable xovi-tripletap power button handler (triple-press to launch XOVI)'
     )
     
+    # Custom package installation
+    install_group.add_argument(
+        '--install-package',
+        metavar='PACKAGE_PATH',
+        help='Install custom package from local ZIP file or directory'
+    )
+    
     # Backup options
     backup_group = parser.add_argument_group('Backup Operations')
     backup_type = backup_group.add_mutually_exclusive_group()
@@ -501,6 +682,10 @@ def main() -> int:
             
         elif args.delete_backup:
             success = app.run_cli_backup_operations("delete", args.delete_backup)
+            exit_code = 0 if success else 1
+            
+        elif args.install_package:
+            success = app.run_cli_custom_package_install(args.install_package)
             exit_code = 0 if success else 1
             
         elif args.cli or any([args.full_install, args.launcher_only, args.stage1, args.stage2, getattr(args, 'continue', False)]):

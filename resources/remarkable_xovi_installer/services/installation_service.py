@@ -10,6 +10,7 @@ import os
 import time
 import logging
 import tempfile
+import urllib.request
 from pathlib import Path
 from typing import Optional, Callable, Dict, Any, List
 from enum import Enum
@@ -900,7 +901,106 @@ echo "XOVI hashtable rebuild completed successfully!"'''
                 self._log_output(f"Tripletap setup failed: {result.stderr}")
                 return False
             
-            # Step 5: Install and enable the systemd service
+            # Step 5: Modify main.sh to include ethernet fix functionality
+            self._log_output("Enhancing tripletap script with ethernet fix functionality...")
+            result = self.network_service.execute_command("""
+                cd /home/root/xovi-tripletap
+                
+                # Create enhanced main.sh with ethernet fix integration
+                cat > main.sh << 'MAIN_SCRIPT_EOF'
+#!/bin/bash
+
+# Enhanced xovi-tripletap main script with ethernet fix integration
+# This script detects triple power button presses and launches XOVI + ethernet fix
+
+DEVICE_FILE="/dev/input/event0"
+LOG_FILE="/tmp/xovi-tripletap.log"
+
+log_message() {
+    echo "$(date): $1" >> "$LOG_FILE"
+}
+
+apply_ethernet_fix() {
+    log_message "Applying USB ethernet fix alongside XOVI launch..."
+    
+    # Apply the same ethernet fix commands as the network service
+    modprobe g_ether 2>/dev/null || log_message "g_ether module load failed (may already be loaded)"
+    ip link set usb0 up 2>/dev/null || log_message "usb0 interface up failed"
+    ip addr add 10.11.99.1/27 dev usb0 2>/dev/null || log_message "IP configuration completed (may already exist)"
+    
+    log_message "Ethernet fix applied successfully"
+}
+
+launch_xovi() {
+    log_message "Triple-tap detected! Launching XOVI and applying ethernet fix..."
+    
+    # First apply the ethernet fix for improved connectivity
+    apply_ethernet_fix
+    
+    # Then launch XOVI as normal
+    /home/root/xovi/start 2>&1 | while read line; do
+        log_message "XOVI: $line"
+    done
+    
+    log_message "XOVI launch completed"
+}
+
+log_message "xovi-tripletap service started with ethernet fix integration"
+
+# Monitor power button events
+while true; do
+    if [ -c "$DEVICE_FILE" ]; then
+        # Use the system evtest binary with absolute path
+        /usr/bin/evtest "$DEVICE_FILE" 2>/dev/null | while read line; do
+            if echo "$line" | grep -q "KEY_POWER.*value 1"; then
+                # Power button pressed - start timing sequence
+                log_message "Power button press detected"
+                
+                # Simple triple-tap detection logic
+                count=1
+                start_time=$(date +%s)
+                
+                while [ $count -lt 3 ]; do
+                    # Wait for next event with timeout
+                    if read -t 2 next_line; then
+                        if echo "$next_line" | grep -q "KEY_POWER.*value 1"; then
+                            count=$((count + 1))
+                            log_message "Power button press $count detected"
+                        fi
+                    else
+                        # Timeout - reset
+                        break
+                    fi
+                done
+                
+                if [ $count -eq 3 ]; then
+                    current_time=$(date +%s)
+                    elapsed=$((current_time - start_time))
+                    
+                    if [ $elapsed -le 3 ]; then
+                        launch_xovi
+                        # Brief pause to prevent multiple detections
+                        sleep 5
+                    fi
+                fi
+            fi
+        done
+    else
+        log_message "Device file $DEVICE_FILE not found, retrying in 5 seconds..."
+        sleep 5
+    fi
+done
+MAIN_SCRIPT_EOF
+
+                chmod +x main.sh
+                echo "Enhanced main.sh script created with ethernet fix integration"
+            """)
+            
+            if not result.success:
+                self._log_output(f"Main script enhancement failed: {result.stderr}")
+                return False
+            
+            # Step 6: Install and enable the systemd service
             self._log_output("Installing tripletap systemd service...")
             result = self.network_service.execute_command("""
                 cd /home/root/xovi-tripletap
@@ -926,24 +1026,57 @@ echo "XOVI hashtable rebuild completed successfully!"'''
                 self._log_output(f"Tripletap service installation failed: {result.stderr}")
                 return False
             
-            # Step 6: Verify service is running
+            # Step 7: Verify service is running
             result = self.network_service.execute_command("systemctl is-active xovi-tripletap")
             if result.success and "active" in result.stdout:
                 self._log_output("xovi-tripletap service is active and running")
             else:
                 self._log_output("Warning: xovi-tripletap service may not be running properly")
             
-            # Step 7: Cleanup
+            # Step 8: Cleanup
             self.network_service.execute_command(f"rm -f /home/root/{tripletap_filename}")
             
             self._log_output("xovi-tripletap installation completed successfully!")
-            self._log_output("You can now triple-press the power button to launch XOVI")
+            self._log_output("You can now triple-press the power button to launch XOVI with ethernet fix")
             return True
             
         except Exception as e:
             self._log_output(f"Tripletap installation failed: {e}")
             return False
     
+    def install_koreader_only(self) -> bool:
+        """Install only KOReader without full XOVI setup."""
+        try:
+            self._update_progress(InstallationStage.STAGE_2, 0, "Starting KOReader-only installation")
+            
+            # Check if XOVI is already installed
+            result = self.network_service.execute_command("ls -la /home/root/xovi/")
+            if not result.success:
+                self._log_output("XOVI framework not found. Please install XOVI first.")
+                return False
+            
+            # Download and install KOReader
+            if not self._download_koreader():
+                return False
+            self._update_progress(InstallationStage.STAGE_2, 50, "KOReader downloaded")
+            
+            if not self._install_koreader():
+                return False
+            self._update_progress(InstallationStage.STAGE_2, 90, "KOReader installed")
+            
+            # Restart AppLoad to detect new application
+            self._log_output("Restarting system to refresh AppLoad...")
+            result = self.network_service.execute_command("systemctl restart xochitl")
+            if not result.success:
+                self._log_output("System restart may have failed, but KOReader should be installed")
+            
+            self._update_progress(InstallationStage.STAGE_2, 100, "KOReader installation complete")
+            return True
+            
+        except Exception as e:
+            self._log_output(f"KOReader-only installation failed: {e}")
+            return False
+
     def _apply_ethernet_safety_fix(self) -> None:
         """Apply USB ethernet fix silently as a safety net."""
         try:
@@ -956,6 +1089,129 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         except Exception as e:
             # Don't fail installation for ethernet fix issues
             self._log_output(f"USB ethernet safety fix encountered error (non-fatal): {e}")
+
+    def install_literm_only(self, progress_callback=None):
+        """Install rm-literm terminal emulator only"""
+        try:
+            self._logger.info("Starting rm-literm installation")
+            if progress_callback:
+                progress_callback("Starting rm-literm installation...", 0)
+            
+            if progress_callback:
+                progress_callback("Connecting to device...", 10)
+            
+            # Connect to device
+            if not self.network_service.connect():
+                raise Exception("Failed to connect to device")
+            
+            # Check XOVI installation
+            xovi_check = self.network_service.execute_command("test -d /home/root/xovi && echo 'exists' || echo 'missing'")
+            if not xovi_check.success or "missing" in xovi_check.stdout:
+                raise Exception("XOVI not installed. Please install XOVI first.")
+            
+            if progress_callback:
+                progress_callback("Detecting device architecture...", 20)
+            
+            # Detect device architecture
+            arch_result = self.network_service.execute_command("uname -m")
+            if not arch_result.success:
+                raise Exception("Failed to detect device architecture")
+            
+            arch = arch_result.stdout.strip()
+            self._logger.info(f"Detected device architecture: {arch}")
+            
+            # Map architecture to release filename
+            if arch == "aarch64":
+                literm_filename = "literm-aarch64.so"
+            elif arch in ["armv7l", "arm"]:
+                literm_filename = "literm-arm32.so"
+            else:
+                raise Exception(f"Unsupported architecture: {arch}")
+            
+            if progress_callback:
+                progress_callback(f"Downloading rm-literm for {arch}...", 30)
+            
+            # Download the appropriate binary from GitHub releases
+            download_url = f"https://github.com/asivery/rm-literm/releases/latest/download/{literm_filename}"
+            qmd_url = "https://raw.githubusercontent.com/asivery/rm-literm/master/literm.qmd"
+            
+            # Create temporary directory for downloads
+            temp_dir = "/tmp/literm_install"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Download the binary
+            literm_local_path = os.path.join(temp_dir, "literm.so")
+            
+            try:
+                urllib.request.urlretrieve(download_url, literm_local_path)
+                self._logger.info(f"Downloaded {literm_filename} from GitHub releases")
+            except Exception as e:
+                raise Exception(f"Failed to download rm-literm binary: {str(e)}")
+            
+            # Download the QMD file
+            literm_qmd_path = os.path.join(temp_dir, "literm.qmd")
+            try:
+                urllib.request.urlretrieve(qmd_url, literm_qmd_path)
+                self._logger.info("Downloaded literm.qmd from GitHub repository")
+            except Exception as e:
+                raise Exception(f"Failed to download literm.qmd: {str(e)}")
+            
+            # Create the .xovi file locally based on the real structure
+            literm_xovi_path = os.path.join(temp_dir, "literm.xovi")
+            with open(literm_xovi_path, 'w') as f:
+                f.write("""version         0.1.0
+
+depends-on      qt-resource-rebuilder:0.3.0
+import?         qt-resource-rebuilder$qmldiff_add_external_diff
+resource        qmldiff:literm.qmd
+
+""")
+            
+            if progress_callback:
+                progress_callback("Uploading rm-literm files...", 60)
+            
+            # Upload files
+            if not self.network_service.upload_file(literm_local_path, "/home/root/xovi/extensions.d/literm.so"):
+                raise Exception("Failed to upload literm.so")
+            
+            if not self.network_service.upload_file(literm_xovi_path, "/home/root/xovi/extensions.d/literm.xovi"):
+                raise Exception("Failed to upload literm.xovi")
+            
+            if not self.network_service.upload_file(literm_qmd_path, "/home/root/xovi/extensions.d/literm.qmd"):
+                raise Exception("Failed to upload literm.qmd")
+            
+            if progress_callback:
+                progress_callback("Setting permissions...", 80)
+            
+            # Set permissions
+            self.network_service.execute_command("chmod +x /home/root/xovi/extensions.d/literm.so")
+            
+            if progress_callback:
+                progress_callback("Restarting XOVI service...", 90)
+            
+            # Restart XOVI to load the new extension
+            self.network_service.execute_command("systemctl restart xochitl")
+            
+            # Clean up temporary files
+            try:
+                os.remove(literm_local_path)
+                os.remove(literm_xovi_path)
+                os.remove(literm_qmd_path)
+                os.rmdir(temp_dir)
+            except:
+                pass  # Clean up is not critical
+            
+            if progress_callback:
+                progress_callback("rm-literm installation complete!", 100)
+            
+            self._logger.info("rm-literm installation completed successfully")
+            return True
+            
+        except Exception as e:
+            self._logger.error(f"rm-literm installation failed: {str(e)}")
+            if progress_callback:
+                progress_callback(f"Installation failed: {str(e)}", 0)
+            return False
     
     def _final_configuration(self) -> bool:
         """Perform final cleanup and restart xochitl to activate all components."""
