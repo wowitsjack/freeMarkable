@@ -2,9 +2,11 @@
 
 ![freeMarkable Interface](image.png)
 
-**Python GUI for installing XOVI on reMarkable devices**
+**Python GUI for installing XOVI on reMarkable devices over USB**
 
-Python GUI application for installing XOVI+AppLoad on **all reMarkable devices**, including the new **reMarkable Paper Pro**. Features automatic device detection, graphical interface, and backup system for safe installations.
+Python GUI application for installing XOVI+AppLoad on **all reMarkable devices**, including the new **reMarkable Paper Pro**. Features automatic device detection, graphical interface, and backup system for safe installations using the USB ethernet built into the device.
+
+Please only use this software with a USB cable, WiFi use is not recommended.
 
 ## NEW: reMarkable Paper Pro Support
 
