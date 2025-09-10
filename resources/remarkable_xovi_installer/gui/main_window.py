@@ -1708,6 +1708,31 @@ class MainWindow:
         )
         warning_label.pack(pady=(0, 15))
         
+        # Triple-tap launch instructions
+        tripletap_frame = ctk.CTkFrame(content_frame)
+        tripletap_frame.pack(fill="x", padx=10, pady=(0, 15))
+        
+        ctk.CTkLabel(
+            tripletap_frame,
+            text="🚀 LAUNCH XOVI AFTER REBOOT:",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#44ff44"
+        ).pack(pady=(15, 5))
+        
+        ctk.CTkLabel(
+            tripletap_frame,
+            text="Press the POWER BUTTON 3 times rapidly to launch XOVI",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#88ff88"
+        ).pack(pady=(0, 3))
+        
+        ctk.CTkLabel(
+            tripletap_frame,
+            text="(This may take a few attempts to get the timing right)",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        ).pack(pady=(0, 15))
+        
         # Step-by-step instructions frame
         instructions_frame = ctk.CTkFrame(content_frame)
         instructions_frame.pack(fill="x", padx=10, pady=(0, 15))
