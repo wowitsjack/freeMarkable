@@ -90,14 +90,25 @@ class SetupWizard:
         """Create the main wizard window."""
         self.wizard_window = ctk.CTkToplevel(self.parent)
         self.wizard_window.title("freeMarkable - Setup Wizard")
-        self.wizard_window.geometry("700x500")
-        self.wizard_window.resizable(False, False)
+        
+        # Get screen dimensions for responsive sizing
+        screen_width = self.wizard_window.winfo_screenwidth()
+        screen_height = self.wizard_window.winfo_screenheight()
+        
+        # Set minimum size and calculate preferred size
+        min_width, min_height = 600, 400
+        pref_width = min(800, int(screen_width * 0.8))
+        pref_height = min(600, int(screen_height * 0.8))
+        
+        self.wizard_window.geometry(f"{pref_width}x{pref_height}")
+        self.wizard_window.minsize(min_width, min_height)
+        self.wizard_window.resizable(True, True)
         
         # Center the window
         self.wizard_window.update_idletasks()
-        x = (self.wizard_window.winfo_screenwidth() // 2) - (700 // 2)
-        y = (self.wizard_window.winfo_screenheight() // 2) - (500 // 2)
-        self.wizard_window.geometry(f"700x500+{x}+{y}")
+        x = (screen_width // 2) - (pref_width // 2)
+        y = (screen_height // 2) - (pref_height // 2)
+        self.wizard_window.geometry(f"{pref_width}x{pref_height}+{x}+{y}")
         
         # Make it modal
         self.wizard_window.transient(self.parent)
@@ -110,11 +121,10 @@ class SetupWizard:
         self.wizard_window.grid_columnconfigure(0, weight=1)
         self.wizard_window.grid_rowconfigure(0, weight=1)
         
-        # Main content frame
-        self.content_frame = ctk.CTkFrame(self.wizard_window)
+        # Main scrollable content frame
+        self.content_frame = ctk.CTkScrollableFrame(self.wizard_window)
         self.content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         self.content_frame.grid_columnconfigure(0, weight=1)
-        self.content_frame.grid_rowconfigure(1, weight=1)
         
         # Header frame
         header_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -138,11 +148,10 @@ class SetupWizard:
         )
         self.step_indicator.grid(row=0, column=1, sticky="e")
         
-        # Steps container
+        # Steps container - now scrollable content within the main scrollable frame
         self.steps_container = ctk.CTkFrame(self.content_frame)
-        self.steps_container.grid(row=1, column=0, sticky="nsew")
+        self.steps_container.grid(row=1, column=0, sticky="ew", pady=(0, 20))
         self.steps_container.grid_columnconfigure(0, weight=1)
-        self.steps_container.grid_rowconfigure(0, weight=1)
     
     def _setup_navigation(self) -> None:
         """Setup navigation buttons."""
@@ -197,9 +206,8 @@ class SetupWizard:
         
         for step in steps:
             frame = ctk.CTkFrame(self.steps_container, fg_color="transparent")
-            frame.grid(row=0, column=0, sticky="nsew")
+            frame.grid(row=0, column=0, sticky="ew")
             frame.grid_columnconfigure(0, weight=1)
-            frame.grid_rowconfigure(0, weight=1)
             frame.grid_remove()  # Hide initially
             
             self.step_frames[step] = frame
@@ -222,7 +230,7 @@ class SetupWizard:
         """Create welcome step content."""
         # Welcome content frame
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Welcome title
@@ -273,8 +281,7 @@ class SetupWizard:
             text=(
                 "• This installer will modify your reMarkable device's software\n"
                 "• A backup will be created automatically before installation\n"
-                "• Installation can be reversed using the backup if needed\n"
-                "• Ensure your device has sufficient storage space (>100MB free)"
+                "• Installation can be reversed using the backup if needed"
             ),
             font=ctk.CTkFont(size=12),
             wraplength=580,
@@ -285,7 +292,7 @@ class SetupWizard:
     def _create_device_connection_step(self, parent: ctk.CTkFrame) -> None:
         """Create device connection step content."""
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Step title
@@ -373,7 +380,7 @@ class SetupWizard:
     def _create_device_test_step(self, parent: ctk.CTkFrame) -> None:
         """Create device test step content."""
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Step title
@@ -430,7 +437,7 @@ class SetupWizard:
     def _create_wifi_setup_step(self, parent: ctk.CTkFrame) -> None:
         """Create WiFi setup step content."""
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Step title
@@ -495,7 +502,7 @@ class SetupWizard:
     def _create_requirements_check_step(self, parent: ctk.CTkFrame) -> None:
         """Create requirements check step content."""
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Step title
@@ -521,9 +528,10 @@ class SetupWizard:
         # Requirements results
         self.step_widgets["requirements_frame"] = ctk.CTkScrollableFrame(
             content_frame,
-            label_text="Requirements Check Results"
+            label_text="Requirements Check Results",
+            height=200
         )
-        self.step_widgets["requirements_frame"].grid(row=2, column=0, sticky="nsew", pady=(0, 20))
+        self.step_widgets["requirements_frame"].grid(row=2, column=0, sticky="ew", pady=(0, 20))
         
         # Initial message
         initial_message = ctk.CTkLabel(
@@ -537,7 +545,7 @@ class SetupWizard:
     def _create_summary_step(self, parent: ctk.CTkFrame) -> None:
         """Create summary step content."""
         content_frame = ctk.CTkFrame(parent)
-        content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
         content_frame.grid_columnconfigure(0, weight=1)
         
         # Step title
@@ -885,26 +893,11 @@ class SetupWizard:
         ssh_result = self.validator.check_ssh_requirements()
         results.append(("SSH Tools", ssh_result.is_valid, ssh_result.message))
         
-        # Check device storage (if connected)
+        # Check device connectivity (removed storage requirements)
         if self.device and self.device.is_connected():
-            try:
-                # Refresh device info to get storage information
-                if self.device.refresh_device_info():
-                    if self.device.device_info and self.device.device_info.free_space:
-                        # Check if we have at least 100MB free space
-                        free_mb = self.device.device_info.get_free_space_mb()
-                        if free_mb and free_mb >= 100:
-                            results.append(("Device Storage", True, f"Sufficient storage: {free_mb:.1f} MB free"))
-                        else:
-                            results.append(("Device Storage", False, f"Insufficient storage: {free_mb:.1f} MB free (need 100MB)"))
-                    else:
-                        results.append(("Device Storage", True, "Storage check completed (details unavailable)"))
-                else:
-                    results.append(("Device Storage", False, "Could not check device storage"))
-            except Exception as e:
-                results.append(("Device Storage", False, f"Storage check failed: {e}"))
+            results.append(("Device Connectivity", True, "Device is connected and accessible"))
         else:
-            results.append(("Device Storage", False, "Device not connected for check"))
+            results.append(("Device Connectivity", False, "Device not connected for installation"))
         
         # Update UI in main thread
         self.wizard_window.after(0, self._requirements_check_complete, results)

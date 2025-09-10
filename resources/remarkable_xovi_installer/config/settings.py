@@ -27,7 +27,7 @@ def _get_version_from_file() -> str:
     except Exception:
         pass
     # Fallback to hardcoded version if file doesn't exist
-    return "1.0.15"
+    return "1.0.16"
 
 
 class LogLevel(Enum):

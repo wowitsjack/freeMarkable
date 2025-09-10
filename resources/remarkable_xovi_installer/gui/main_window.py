@@ -2028,7 +2028,6 @@ TROUBLESHOOTING:
 • If connection fails, check the IP address and password
 • For USB connection, use IP 10.11.99.1
 • For WiFi, check the IP in your device's network settings
-• Ensure your device has at least 100MB free space
 
 SUPPORT:
 • Check the logs for detailed error information
