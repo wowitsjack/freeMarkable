@@ -138,6 +138,13 @@ freeMarkable supports all reMarkable devices with reliable installations. Featur
 **v1.0.8**: CodexCtl panel lockout during rewrite phase
 - **UI Updates**: Clean interface messaging during system updates
 - **Backup System**: Enhanced pruning and management features
+- 
+## Known Issues:
+Sometimes, if the main app (Xochitl) fails to reload properly, a bug in the reMarkable OS (Codex), will cause the USB connection to fail to engage.
+
+In this case, connect your computer, and reMarkable to the same WiFi network, ensure you can reach it over ping/ssh, then use freeMarkable and select the 'Ethernet Fix' option in the settings menu.
+
+This is why we have the safeguard of the WiFi connection before freeMarkable will proceed.
 
 ## Contributing
 
