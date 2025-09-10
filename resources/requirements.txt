@@ -3,8 +3,8 @@
 # SSH/SCP Operations
 paramiko>=2.9.0,<4.0.0
 
-# GUI Framework
-customtkinter>=5.0.0
+# GUI Framework (with fallback for older macOS)
+customtkinter>=4.6.3
 
 # HTTP Requests (alternative to urllib for better error handling)
 requests>=2.25.0,<3.0.0

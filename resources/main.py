@@ -9,8 +9,67 @@ import sys
 import argparse
 import logging
 import traceback
+import platform
 from pathlib import Path
 from typing import Optional, List
+
+# macOS compatibility check - must be done before any GUI imports
+def check_macos_compatibility():
+    """Check macOS version compatibility and warn if unsupported."""
+    if platform.system() == "Darwin":  # macOS
+        try:
+            # Get macOS version
+            macos_version = platform.mac_ver()[0]
+            if macos_version:
+                # Parse version (e.g., "10.16.0" or "11.0.0")
+                version_parts = macos_version.split('.')
+                major = int(version_parts[0])
+                minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+                
+                # Check if version is less than macOS 13 (which maps to version 22.x in kernel)
+                # macOS 10.16 = Big Sur, 11.x = Big Sur, 12.x = Monterey, 13.x+ = Ventura+
+                is_unsupported = (major == 10 and minor <= 16) or (major == 11) or (major == 12)
+                
+                if is_unsupported:
+                    # Use simple tkinter messagebox for warning (doesn't require CustomTkinter)
+                    try:
+                        import tkinter as tk
+                        from tkinter import messagebox
+                        
+                        # Create hidden root window
+                        root = tk.Tk()
+                        root.withdraw()
+                        
+                        # Show warning
+                        result = messagebox.askquestion(
+                            "macOS Compatibility Warning",
+                            f"You are running macOS {macos_version}.\n\n"
+                            "This version may not be fully compatible with the latest GUI framework.\n"
+                            "You may experience visual glitches or crashes.\n\n"
+                            "Would you like to continue anyway?\n\n"
+                            "(Click 'No' to exit)",
+                            icon='warning'
+                        )
+                        
+                        root.destroy()
+                        
+                        if result != 'yes':
+                            print("Exiting due to macOS compatibility concerns.")
+                            sys.exit(0)
+                        else:
+                            print(f"Warning: Running on potentially unsupported macOS {macos_version}")
+                            
+                    except ImportError:
+                        # If tkinter isn't available, just print warning and continue
+                        print(f"WARNING: macOS {macos_version} may not be fully compatible")
+                        print("You may experience GUI issues. Consider upgrading to macOS 13+")
+                        
+        except Exception:
+            # If version detection fails, just continue silently
+            pass
+
+# Perform compatibility check before other imports
+check_macos_compatibility()
 
 # SSL imports for macOS compatibility
 try:
