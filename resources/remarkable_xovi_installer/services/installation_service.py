@@ -17,11 +17,12 @@ from enum import Enum
 from dataclasses import dataclass
 
 from .network_service import NetworkService
-from .file_service import FileService  
+from .file_service import FileService
 from .backup_service import BackupService
 from ..models.device import Device
 from ..models.installation_state import InstallationState, InstallationStage, StageStatus
 from ..config.settings import AppConfig
+from ..utils.url_loader import get_url_loader
 
 
 class InstallationType(Enum):
@@ -99,7 +100,7 @@ class InstallationService:
             'xovi_binary': self.config.downloads.get_url_for_architecture('xovi_binary', device_type),
             'koreader': self.config.downloads.get_url_for_architecture('koreader', device_type),
             'xovi_tripletap': self.config.downloads.xovi_tripletap_url,  # This doesn't have arch variants
-            'appload_extension': 'https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so'
+            'appload_extension': self._get_appload_extension_url()
         }
         
         # Get architecture-specific filenames
@@ -111,6 +112,16 @@ class InstallationService:
         }
         
         self._log_output(f"Updated URLs for device architecture: {device_type.architecture if device_type and hasattr(device_type, 'architecture') else 'default'}")
+    
+    def _get_appload_extension_url(self) -> str:
+        """Get appload extension URL from weblist with fallback."""
+        try:
+            url_loader = get_url_loader()
+            additional_urls = url_loader.get_additional_urls()
+            return additional_urls.get("appload_extension", "https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so")
+        except Exception:
+            # Fallback to hardcoded URL if weblist loading fails
+            return "https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so"
     
     def _log_output(self, message: str) -> None:
         """Log output message."""
@@ -921,14 +932,57 @@ log_message() {
 }
 
 apply_ethernet_fix() {
-    log_message "Applying USB ethernet fix alongside XOVI launch..."
+    log_message "Applying robust USB ethernet fix with duplicate detection..."
     
-    # Apply the same ethernet fix commands as the network service
+    # Load the g_ether module if not already loaded
     modprobe g_ether 2>/dev/null || log_message "g_ether module load failed (may already be loaded)"
-    ip link set usb0 up 2>/dev/null || log_message "usb0 interface up failed"
-    ip addr add 10.11.99.1/27 dev usb0 2>/dev/null || log_message "IP configuration completed (may already exist)"
     
-    log_message "Ethernet fix applied successfully"
+    # Find all USB interfaces with the target IP 10.11.99.1
+    USB_INTERFACES_WITH_IP=$(ip addr show | grep -B2 '10.11.99.1' | grep -E '^[0-9]+: usb[0-9]+:' | cut -d: -f2 | tr -d ' ')
+    
+    if [ -n "$USB_INTERFACES_WITH_IP" ]; then
+        INTERFACE_COUNT=$(echo "$USB_INTERFACES_WITH_IP" | wc -l)
+        
+        if [ $INTERFACE_COUNT -gt 1 ]; then
+            log_message "Found duplicate IP 10.11.99.1 on $INTERFACE_COUNT USB interfaces - fixing..."
+            
+            # Keep the highest numbered USB interface (usually the active one)
+            KEEP_INTERFACE=$(echo "$USB_INTERFACES_WITH_IP" | sort -V | tail -n1)
+            log_message "Keeping interface: $KEEP_INTERFACE"
+            
+            # Remove IP from all other interfaces
+            for iface in $USB_INTERFACES_WITH_IP; do
+                if [ "$iface" != "$KEEP_INTERFACE" ]; then
+                    log_message "Removing duplicate IP from $iface"
+                    ip link set $iface down 2>/dev/null || true
+                    ip addr del 10.11.99.1/27 dev $iface 2>/dev/null || true
+                    log_message "Fixed: $iface interface down and IP removed"
+                fi
+            done
+            
+            # Ensure the kept interface is properly configured
+            ip link set $KEEP_INTERFACE up 2>/dev/null || log_message "Warning: Could not bring up $KEEP_INTERFACE"
+            log_message "Robust ethernet fix completed - using $KEEP_INTERFACE"
+            
+        else
+            log_message "Single USB interface $USB_INTERFACES_WITH_IP already has IP 10.11.99.1 - ensuring it's up"
+            ip link set $USB_INTERFACES_WITH_IP up 2>/dev/null || log_message "Warning: Could not bring up $USB_INTERFACES_WITH_IP"
+        fi
+    else
+        log_message "No USB interfaces found with IP 10.11.99.1 - configuring usb0"
+        # Fallback: configure usb0 if no interfaces have the IP
+        ip link set usb0 up 2>/dev/null || log_message "usb0 interface up failed"
+        ip addr add 10.11.99.1/27 dev usb0 2>/dev/null || log_message "IP configuration completed (may already exist)"
+        log_message "Fallback configuration applied to usb0"
+    fi
+    
+    # Additional check for conflicting network routes
+    CONFLICTING_ROUTES=$(ip route show | grep '10.11.99.0/27' | wc -l)
+    if [ $CONFLICTING_ROUTES -gt 1 ]; then
+        log_message "Warning: Found $CONFLICTING_ROUTES routes for USB network - manual cleanup may be needed"
+    fi
+    
+    log_message "Robust ethernet fix applied successfully"
 }
 
 launch_xovi() {
@@ -1131,9 +1185,17 @@ MAIN_SCRIPT_EOF
             if progress_callback:
                 progress_callback(f"Downloading rm-literm for {arch}...", 30)
             
-            # Download the appropriate binary from GitHub releases
-            download_url = f"https://github.com/asivery/rm-literm/releases/latest/download/{literm_filename}"
-            qmd_url = "https://raw.githubusercontent.com/asivery/rm-literm/master/literm.qmd"
+            # Download the appropriate binary from GitHub releases using dynamic URLs
+            try:
+                url_loader = get_url_loader()
+                additional_urls = url_loader.get_additional_urls()
+                download_url_template = additional_urls.get("literm_binary", "https://github.com/asivery/rm-literm/releases/latest/download/{literm_filename}")
+                download_url = download_url_template.format(literm_filename=literm_filename)
+                qmd_url = additional_urls.get("literm_qmd", "https://raw.githubusercontent.com/asivery/rm-literm/master/literm.qmd")
+            except Exception:
+                # Fallback to hardcoded URLs if weblist loading fails
+                download_url = f"https://github.com/asivery/rm-literm/releases/latest/download/{literm_filename}"
+                qmd_url = "https://raw.githubusercontent.com/asivery/rm-literm/master/literm.qmd"
             
             # Create temporary directory for downloads
             temp_dir = "/tmp/literm_install"

@@ -689,10 +689,11 @@ class NetworkService:
     
     def install_ethernet_fix(self) -> bool:
         """
-        Install USB ethernet fix on the reMarkable device.
+        Install robust USB ethernet fix on the reMarkable device.
         
-        This fixes USB ethernet adapter connectivity by loading the g_ether module
-        and configuring the usb0 interface with the standard IP address.
+        This fixes USB ethernet adapter connectivity with duplicate detection and prevention.
+        The enhanced version detects existing USB interfaces with the target IP and properly
+        manages duplicates by keeping the highest-numbered interface active.
         
         Returns:
             True if ethernet fix was successfully applied
@@ -702,30 +703,77 @@ class NetworkService:
                 self._logger.error("Cannot install ethernet fix: not connected")
                 return False
         
-        self._logger.info("Installing USB ethernet fix...")
+        self._logger.info("Installing robust USB ethernet fix with duplicate detection...")
         
         try:
-            # Execute the ethernet fix commands from the original script
-            commands = [
-                "echo 'Loading g_ether module...'",
-                "modprobe g_ether",
-                "echo 'Bringing up usb0 interface...'",
-                "ip link set usb0 up",
-                "echo 'Configuring IP address...'",
-                "ip addr add 10.11.99.1/27 dev usb0 2>/dev/null || echo 'IP already configured'",
-                "echo 'USB Ethernet Fix completed successfully!'",
-                "echo 'You can now connect via USB at 10.11.99.1'"
-            ]
+            # Execute the robust ethernet fix command as a single script
+            robust_fix_script = '''
+# Load the g_ether module if not already loaded
+modprobe g_ether 2>/dev/null || echo "g_ether module load failed (may already be loaded)"
+
+# Find all USB interfaces with the target IP 10.11.99.1
+USB_INTERFACES_WITH_IP=$(ip addr show | grep -B2 '10.11.99.1' | grep -E '^[0-9]+: usb[0-9]+:' | cut -d: -f2 | tr -d ' ')
+
+if [ -n "$USB_INTERFACES_WITH_IP" ]; then
+    INTERFACE_COUNT=$(echo "$USB_INTERFACES_WITH_IP" | wc -l)
+    
+    if [ $INTERFACE_COUNT -gt 1 ]; then
+        echo "Found duplicate IP 10.11.99.1 on $INTERFACE_COUNT USB interfaces - fixing..."
+        
+        # Keep the highest numbered USB interface (usually the active one)
+        KEEP_INTERFACE=$(echo "$USB_INTERFACES_WITH_IP" | sort -V | tail -n1)
+        echo "Keeping interface: $KEEP_INTERFACE"
+        
+        # Remove IP from all other interfaces
+        for iface in $USB_INTERFACES_WITH_IP; do
+            if [ "$iface" != "$KEEP_INTERFACE" ]; then
+                echo "Removing duplicate IP from $iface"
+                ip link set $iface down 2>/dev/null || true
+                ip addr del 10.11.99.1/27 dev $iface 2>/dev/null || true
+                echo "Fixed: $iface interface down and IP removed"
+            fi
+        done
+        
+        # Ensure the kept interface is properly configured
+        ip link set $KEEP_INTERFACE up 2>/dev/null || echo "Warning: Could not bring up $KEEP_INTERFACE"
+        echo "Robust ethernet fix completed - using $KEEP_INTERFACE"
+        
+    else
+        echo "Single USB interface $USB_INTERFACES_WITH_IP already has IP 10.11.99.1 - ensuring it's up"
+        ip link set $USB_INTERFACES_WITH_IP up 2>/dev/null || echo "Warning: Could not bring up $USB_INTERFACES_WITH_IP"
+    fi
+else
+    echo "No USB interfaces found with IP 10.11.99.1 - configuring usb0"
+    # Fallback: configure usb0 if no interfaces have the IP
+    ip link set usb0 up 2>/dev/null || echo "usb0 interface up failed"
+    ip addr add 10.11.99.1/27 dev usb0 2>/dev/null || echo "IP configuration completed (may already exist)"
+    echo "Fallback configuration applied to usb0"
+fi
+
+# Additional check for conflicting network routes
+CONFLICTING_ROUTES=$(ip route show | grep '10.11.99.0/27' | wc -l)
+if [ $CONFLICTING_ROUTES -gt 1 ]; then
+    echo "Warning: Found $CONFLICTING_ROUTES routes for USB network - manual cleanup may be needed"
+    # Log the conflicting routes for debugging
+    ip route show | grep '10.11.99.0/27' | while read route; do
+        echo "Route: $route"
+    done
+fi
+
+echo "Robust USB ethernet fix applied successfully"
+echo "You can now connect via USB at 10.11.99.1"
+            '''
             
-            # Execute all commands in sequence
-            for command in commands:
-                result = self.execute_command(command, timeout=10)
-                if not result.success and "IP already configured" not in result.stderr:
-                    self._logger.warning(f"Ethernet fix command had issues: {command}")
-                    self._logger.warning(f"Output: {result.output}")
-                    # Continue with other commands even if one fails
+            # Execute the robust fix script
+            result = self.execute_command(robust_fix_script, timeout=30)
             
-            self._logger.info("USB ethernet fix installation completed")
+            if not result.success:
+                self._logger.warning(f"Ethernet fix had issues: {result.stderr}")
+                self._logger.warning(f"Output: {result.output}")
+                # Don't fail completely - the fix might have partially worked
+            
+            self._logger.info("Robust USB ethernet fix installation completed")
+            self._logger.info(f"Fix output: {result.stdout}")
             return True
             
         except Exception as e:

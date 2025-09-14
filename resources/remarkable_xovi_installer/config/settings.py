@@ -15,6 +15,9 @@ from enum import Enum
 
 if TYPE_CHECKING:
     from ..models.device import DeviceType
+    
+# Import URL loader for dynamic URL loading
+from ..utils.url_loader import get_url_loader
 
 
 def _get_version_from_file() -> str:
@@ -51,28 +54,63 @@ class NetworkConfig:
 @dataclass
 class DownloadConfig:
     """Download URLs and configuration."""
-    # Default URLs (32-bit ARM for RM1/RM2)
-    xovi_extensions_url: str = "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip"
-    appload_url: str = "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip"
-    xovi_binary_url: str = "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so"
-    koreader_url: str = "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
-    xovi_tripletap_url: str = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip"
+    # Dynamic URL loading from weblist
+    _url_loader = None
     
-    # Architecture-specific URL mappings
-    _url_mappings: Dict[str, Dict[str, str]] = field(default_factory=lambda: {
-        "arm32": {
-            "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip",
-            "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip",
-            "xovi_binary": "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so",
-            "koreader": "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
-        },
-        "aarch64": {
-            "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip",
-            "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip",
-            "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so",
-            "koreader": "https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip"
-        }
-    })
+    def __post_init__(self):
+        """Initialize URL loader and populate URLs dynamically."""
+        try:
+            if self._url_loader is None:
+                self._url_loader = get_url_loader()
+            
+            # Get architecture-specific URLs from weblist
+            arch_urls = self._url_loader.get_architecture_urls()
+            general_urls = self._url_loader.get_general_urls()
+            
+            # Set default URLs (32-bit ARM for RM1/RM2) from weblist
+            self.xovi_extensions_url = arch_urls.get("arm32", {}).get("xovi_extensions", "")
+            self.appload_url = arch_urls.get("arm32", {}).get("appload", "")
+            self.xovi_binary_url = arch_urls.get("arm32", {}).get("xovi_binary", "")
+            self.koreader_url = arch_urls.get("arm32", {}).get("koreader", "")
+            self.xovi_tripletap_url = general_urls.get("xovi_tripletap", "")
+            
+            # Set architecture-specific URL mappings from weblist
+            self._url_mappings = arch_urls
+            
+        except Exception as e:
+            # Fallback to hardcoded URLs if weblist loading fails
+            logging.warning(f"Failed to load URLs from weblist, using fallback values: {e}")
+            self.xovi_extensions_url = "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip"
+            self.appload_url = "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip"
+            self.xovi_binary_url = "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so"
+            self.koreader_url = "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
+            self.xovi_tripletap_url = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip"
+            
+            # Fallback architecture-specific URL mappings
+            self._url_mappings = {
+                "arm32": {
+                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip",
+                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip",
+                    "xovi_binary": "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so",
+                    "koreader": "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
+                },
+                "aarch64": {
+                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip",
+                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip",
+                    "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so",
+                    "koreader": "https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip"
+                }
+            }
+    
+    # Default URLs (will be populated dynamically in __post_init__)
+    xovi_extensions_url: str = ""
+    appload_url: str = ""
+    xovi_binary_url: str = ""
+    koreader_url: str = ""
+    xovi_tripletap_url: str = ""
+    
+    # Architecture-specific URL mappings (will be populated dynamically)
+    _url_mappings: Dict[str, Dict[str, str]] = field(default_factory=dict)
     
     # Download settings
     download_timeout: int = 300

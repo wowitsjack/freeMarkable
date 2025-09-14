@@ -33,6 +33,7 @@ except ImportError:
 from remarkable_xovi_installer.utils.logger import get_logger
 from remarkable_xovi_installer.config.settings import get_config
 from remarkable_xovi_installer.services.network_service import get_network_service
+from remarkable_xovi_installer.utils.url_loader import get_url_loader
 
 
 class CodexCtlOperation(Enum):
@@ -341,7 +342,14 @@ class CodexCtlService:
     
     def _get_latest_release(self) -> Optional[Dict[str, Any]]:
         """Get latest release information from GitHub with retry logic."""
-        url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
+        try:
+            url_loader = get_url_loader()
+            api_urls = url_loader.get_api_urls()
+            url_template = api_urls.get("releases_latest", "https://api.github.com/repos/{github_repo}/releases/latest")
+            url = url_template.format(github_repo=self.github_repo)
+        except Exception:
+            # Fallback to hardcoded URL if weblist loading fails
+            url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
         max_retries = 3
         base_delay = 1.0
         
@@ -875,11 +883,17 @@ class CodexCtlService:
             True if internet connection appears to be working
         """
         try:
-            # Quick connectivity test to GitHub API
-            response = requests.head(
-                f"https://api.github.com/repos/{self.github_repo}",
-                timeout=5
-            )
+            # Quick connectivity test to GitHub API using dynamic URL
+            try:
+                url_loader = get_url_loader()
+                api_urls = url_loader.get_api_urls()
+                url_template = api_urls.get("repo_info", "https://api.github.com/repos/{github_repo}")
+                url = url_template.format(github_repo=self.github_repo)
+            except Exception:
+                # Fallback to hardcoded URL if weblist loading fails
+                url = f"https://api.github.com/repos/{self.github_repo}"
+            
+            response = requests.head(url, timeout=5)
             return response.status_code < 500
         except Exception:
             # Any network error means no connectivity

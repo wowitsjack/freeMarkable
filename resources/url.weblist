@@ -1,0 +1,37 @@
+# FreeMarkable URL WebList
+# Collection of all discovered URLs used in the codebase
+
+# GitHub Repository URLs
+https://github.com/wowitsjack/freeMarkable.git
+https://github.com/wowitsjack/freeMarkable
+
+# Documentation/Installation URLs
+https://python.org
+https://facebook.github.io/watchman/
+
+# ARM32 Architecture URLs
+https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip
+https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip
+https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so
+https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip
+https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip
+
+# AARCH64 Architecture URLs
+https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip
+https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip
+https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so
+https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip
+
+# API URLs (with placeholder format)
+https://api.github.com/repos/{github_repo}/releases/latest
+https://api.github.com/repos/{github_repo}
+
+# Additional Download URLs
+https://github.com/asivery/rm-xovi-extensions/releases/latest/download/appload.so
+https://github.com/asivery/rm-literm/releases/latest/download/{literm_filename}
+https://raw.githubusercontent.com/asivery/rm-literm/master/literm.qmd
+
+# Ghostwriter - Vision-LLM Agent
+https://github.com/awwaiid/ghostwriter/releases/latest/download/ghostwriter-rm2
+https://github.com/awwaiid/ghostwriter/releases/latest/download/ghostwriter-rmpp
+https://github.com/awwaiid/ghostwriter

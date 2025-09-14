@@ -1706,15 +1706,16 @@ class MainWindow:
     def _show_hard_reboot_popup(self) -> None:
         """Show critical hard reboot warning popup after installation."""
         dialog = ctk.CTkToplevel(self.root)
-        dialog.title("CRITICAL: Hard Reboot Required")
-        dialog.geometry("550x400")
-        dialog.resizable(False, False)
+        dialog.title("Installation Complete!")
+        dialog.geometry("600x500")
+        dialog.resizable(True, True)
+        dialog.minsize(500, 400)
         
         # Center the dialog
         dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (550 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (400 // 2)
-        dialog.geometry(f"550x400+{x}+{y}")
+        x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (500 // 2)
+        dialog.geometry(f"600x500+{x}+{y}")
         
         # Make it modal and force it to stay on top
         dialog.transient(self.root)
@@ -1722,27 +1723,27 @@ class MainWindow:
         dialog.lift()
         dialog.focus_force()
         
-        # Configure frame
-        content_frame = ctk.CTkFrame(dialog)
+        # Configure scrollable frame
+        content_frame = ctk.CTkScrollableFrame(dialog)
         content_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Critical warning title with red color
+        # Success title
         title_label = ctk.CTkLabel(
             content_frame,
-            text="⚠️ CRITICAL: HARD REBOOT REQUIRED ⚠️",
+            text="🎉 INSTALLATION COMPLETED SUCCESSFULLY! 🎉",
             font=ctk.CTkFont(size=18, weight="bold"),
-            text_color="#ff4444"
+            text_color="#44ff44"
         )
         title_label.pack(pady=(10, 20))
         
-        # Main warning message
-        warning_label = ctk.CTkLabel(
+        # Main success message
+        success_label = ctk.CTkLabel(
             content_frame,
-            text="Installation completed successfully!\n\nYou MUST now perform a HARD REBOOT using the power button:",
+            text="Your XOVI installation is complete and ready to use!\n\nIn most cases, your device should work normally now.",
             font=ctk.CTkFont(size=14, weight="bold"),
             justify="center"
         )
-        warning_label.pack(pady=(0, 15))
+        success_label.pack(pady=(0, 15))
         
         # Triple-tap launch instructions
         tripletap_frame = ctk.CTkFrame(content_frame)
@@ -1769,13 +1770,13 @@ class MainWindow:
             text_color="gray"
         ).pack(pady=(0, 15))
         
-        # Step-by-step instructions frame
+        # Step-by-step instructions frame (only if needed)
         instructions_frame = ctk.CTkFrame(content_frame)
         instructions_frame.pack(fill="x", padx=10, pady=(0, 15))
         
         ctk.CTkLabel(
             instructions_frame,
-            text="POWER BUTTON REBOOT STEPS:",
+            text="HARD REBOOT STEPS (Only if device is stuck):",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color="#ff8844"
         ).pack(pady=(15, 10))
@@ -1787,7 +1788,7 @@ class MainWindow:
         ctk.CTkLabel(
             step1_frame,
             text="1. PRESS the power button ONCE (short press)",
-            font=ctk.CTkFont(size=12, weight="bold")
+            font=ctk.CTkFont(size=11)
         ).pack(anchor="w")
         
         # Step 2
@@ -1797,7 +1798,7 @@ class MainWindow:
         ctk.CTkLabel(
             step2_frame,
             text="2. Then PRESS AND HOLD the power button until device shuts off",
-            font=ctk.CTkFont(size=12, weight="bold")
+            font=ctk.CTkFont(size=11)
         ).pack(anchor="w")
         
         # Step 3
@@ -1807,61 +1808,61 @@ class MainWindow:
         ctk.CTkLabel(
             step3_frame,
             text="3. Press power button again to turn device back on",
-            font=ctk.CTkFont(size=12, weight="bold")
+            font=ctk.CTkFont(size=11)
         ).pack(anchor="w")
         
-        # Critical warning about boot loop
-        loop_warning_frame = ctk.CTkFrame(content_frame)
-        loop_warning_frame.pack(fill="x", padx=10, pady=(0, 15))
+        # Conditional hard reboot warning
+        reboot_warning_frame = ctk.CTkFrame(content_frame)
+        reboot_warning_frame.pack(fill="x", padx=10, pady=(0, 15))
         
         ctk.CTkLabel(
-            loop_warning_frame,
-            text="⚠️ WARNING: THE LOADER WILL LOOP UNTIL THIS IS DONE! ⚠️",
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color="#ff4444"
+            reboot_warning_frame,
+            text="⚠️ ONLY IF YOUR DEVICE GETS STUCK ⚠️",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#ff8844"
         ).pack(pady=(15, 5))
         
         ctk.CTkLabel(
-            loop_warning_frame,
-            text="If you don't perform the hard reboot, your device may appear stuck\nin a boot loop. This is normal - just follow the steps above.",
-            font=ctk.CTkFont(size=11),
+            reboot_warning_frame,
+            text="If your device appears stuck in a starting loop or doesn't respond normally,\nTHEN perform a hard reboot using the power button steps above.\n\nFor most users, the device should work fine without a hard reboot.",
+            font=ctk.CTkFont(size=12),
             justify="center",
             text_color="gray"
         ).pack(pady=(0, 15))
         
         # Confirmation checkbox
-        self.reboot_understood = tk.BooleanVar(value=False)
+        self.installation_understood = tk.BooleanVar(value=False)
         checkbox_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
         checkbox_frame.pack(fill="x", pady=(0, 15))
         
-        reboot_checkbox = ctk.CTkCheckBox(
+        installation_checkbox = ctk.CTkCheckBox(
             checkbox_frame,
-            text="I understand and will perform the hard reboot now",
-            variable=self.reboot_understood,
+            text="I understand the installation is complete",
+            variable=self.installation_understood,
             font=ctk.CTkFont(size=12, weight="bold")
         )
-        reboot_checkbox.pack()
+        installation_checkbox.pack()
         
         # Button frame
         button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
         button_frame.pack(fill="x")
         
         def close_dialog():
-            if self.reboot_understood.get():
+            if self.installation_understood.get():
                 dialog.destroy()
             else:
                 # Flash the checkbox to draw attention
-                reboot_checkbox.configure(text_color="#ff4444")
-                self.root.after(500, lambda: reboot_checkbox.configure(text_color=("gray10", "gray90")))
+                installation_checkbox.configure(text_color="#ff4444")
+                self.root.after(500, lambda: installation_checkbox.configure(text_color=("gray10", "gray90")))
         
-        def auto_reboot():
-            if not self.reboot_understood.get():
+        def manual_reboot():
+            if not self.installation_understood.get():
                 # Flash the checkbox to draw attention
-                reboot_checkbox.configure(text_color="#ff4444")
-                self.root.after(500, lambda: reboot_checkbox.configure(text_color=("gray10", "gray90")))
+                installation_checkbox.configure(text_color="#ff4444")
+                self.root.after(500, lambda: installation_checkbox.configure(text_color=("gray10", "gray90")))
                 return
             
-            # Close dialog and initiate automatic reboot
+            # Close dialog and initiate manual reboot
             dialog.destroy()
             self._perform_automatic_reboot()
         
@@ -1869,34 +1870,34 @@ class MainWindow:
         buttons_container = ctk.CTkFrame(button_frame, fg_color="transparent")
         buttons_container.pack(expand=True)
         
-        # Manual reboot button
-        manual_button = ctk.CTkButton(
+        # Continue button
+        continue_button = ctk.CTkButton(
             buttons_container,
-            text="✅ I Will Hard Reboot Manually",
+            text="✅ Continue - Device Ready",
             command=close_dialog,
-            width=200,
+            width=220,
             height=45,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#28a745",
             hover_color="#218838"
         )
-        manual_button.pack(side="left", padx=(0, 10))
+        continue_button.pack(side="left", padx=(0, 10))
         
-        # Automatic reboot button
-        auto_button = ctk.CTkButton(
+        # Manual reboot button (for if needed)
+        reboot_button = ctk.CTkButton(
             buttons_container,
-            text="🔄 Automatic Hard Reboot Now",
-            command=auto_reboot,
-            width=200,
+            text="🔄 Hard Reboot (If Stuck)",
+            command=manual_reboot,
+            width=180,
             height=45,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#dc3545",
             hover_color="#c82333"
         )
-        auto_button.pack(side="left", padx=(10, 0))
+        reboot_button.pack(side="left", padx=(10, 0))
         
-        # Log the critical warning
-        self.logger.warning("CRITICAL: Hard reboot popup displayed - user MUST perform power button reboot")
+        # Log the installation completion
+        self.logger.info("Installation complete popup displayed - user can continue normally")
     
     def _perform_automatic_reboot(self) -> None:
         """Perform automatic hard reboot of the device."""
@@ -3087,6 +3088,10 @@ SUPPORT:
             self._update_status(message)
             # Clear the selected package
             self.custom_app_path.set("No package selected")
+            
+            # Automatically restart AppLoad to refresh application list
+            self._update_status(f"{message} - refreshing AppLoad...")
+            self._restart_appload_after_install()
         else:
             self._update_status(f"Installation failed: {message}")
     
@@ -3547,6 +3552,45 @@ For technical support and examples, visit the freeMarkable GitHub repository.
         
         threading.Thread(target=restart_appload, daemon=True).start()
     
+    def _restart_appload_after_install(self) -> None:
+        """Restart AppLoad system after package installation to refresh application list."""
+        if not self.device or not self.device.is_connected():
+            self._update_status("Cannot refresh AppLoad - device not connected")
+            return
+        
+        def restart_appload_silent():
+            try:
+                from ..services.network_service import get_network_service
+                network_service = get_network_service()
+                result = network_service.execute_command("""
+                    echo "Refreshing AppLoad system after installation..."
+                    
+                    # Restart xochitl service to refresh applications
+                    systemctl restart xochitl
+                    
+                    # Wait for restart to complete
+                    sleep 3
+                    
+                    # Verify restart was successful
+                    if systemctl is-active xochitl >/dev/null 2>&1; then
+                        echo "AppLoad refreshed successfully - new application should now appear"
+                    else
+                        echo "Warning: AppLoad refresh may not have completed properly"
+                    fi
+                """)
+                
+                if result.success:
+                    self.root.after(0, lambda: self._update_status("Installation complete - AppLoad refreshed automatically"))
+                    self.root.after(0, lambda: self.logger.info("AppLoad automatically refreshed after package installation"))
+                else:
+                    self.root.after(0, lambda: self._update_status("Installation complete - AppLoad refresh may have failed"))
+                    
+            except Exception as e:
+                self.logger.error(f"Automatic AppLoad refresh failed: {e}")
+                self.root.after(0, lambda: self._update_status("Installation complete - automatic refresh failed"))
+        
+        threading.Thread(target=restart_appload_silent, daemon=True).start()
+    
     def _install_builtin_koreader(self) -> None:
         """Install KOReader using the built-in package system."""
         if not self._ensure_connected():
@@ -3651,6 +3695,10 @@ For technical support and examples, visit the freeMarkable GitHub repository.
         if success:
             self._update_status(f"{operation_name} completed successfully")
             self.progress_panel.complete_operation(True, f"{operation_name} completed successfully")
+            
+            # Automatically restart AppLoad to refresh application list
+            self._update_status(f"{operation_name} completed - refreshing AppLoad...")
+            self._restart_appload_after_install()
         else:
             self._update_status(f"{operation_name} failed")
             self.progress_panel.complete_operation(False, f"{operation_name} failed")
