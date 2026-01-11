@@ -43,7 +43,7 @@ fi
 # Install requirements if needed
 if [ -f "$RESOURCES_DIR/requirements.txt" ]; then
     echo "Installing Python dependencies..."
-    python3 -m pip install -r "$RESOURCES_DIR/requirements.txt" --user
+    python3 -m pip install -r "$RESOURCES_DIR/requirements.txt"
     echo ""
 fi
 
