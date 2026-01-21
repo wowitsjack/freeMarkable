@@ -1,13 +1,4 @@
-# freeMarkable (Unmaintained)
-
-_____________________
-
-Hi everyone! 
-
-I no longer own a reMarkable, so this repo won't be updated.
-
-For anybody with a copy of Claude Code, or a few hours of time, the fix is just updating the linked web resources to the latest versions for 64bit and 32bit devices.
-
+# freeMarkable Revived
 ______________________
 
 ![freeMarkable Interface](image.png)
