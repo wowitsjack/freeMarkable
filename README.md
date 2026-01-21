@@ -1,4 +1,6 @@
 # freeMarkable Revived
+
+Support for Remarkable PaperPro has been repaired
 ______________________
 
 ![freeMarkable Interface](image.png)
