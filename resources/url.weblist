@@ -11,14 +11,14 @@ https://facebook.github.io/watchman/
 
 # ARM32 Architecture URLs
 https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip
-https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip
+https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-arm32.zip
 https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so
 https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip
 https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip
 
 # AARCH64 Architecture URLs
 https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip
-https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip
+https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-aarch64.zip
 https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so
 https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip
 

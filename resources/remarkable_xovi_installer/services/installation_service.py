@@ -315,10 +315,8 @@ class InstallationService:
                 return False
             self._update_progress(InstallationStage.STAGE_2, 90, "Final configuration complete")
             
-            # Step 4: CRITICAL FIX - Ensure XOVI is activated (in case Stage 2 is run standalone)
-            if not self._activate_xovi():
-                return False
-            self._update_progress(InstallationStage.STAGE_2, 95, "XOVI activated")
+            # Note: XOVI activation is handled within _final_configuration()
+            # No need to call _activate_xovi() again here
             
             # Step 5: Install tripletap if enabled (optional convenience feature)
             if self.config.installation.enable_tripletap:
@@ -368,7 +366,7 @@ class InstallationService:
             # Final step: Activate XOVI
             if not self._activate_xovi():
                 return False
-            self._update_progress(InstallationStage.LAUNCHER_ONLY, 95, "XOVI activated")
+            self._update_progress(InstallationStage.LAUNCHER_ONLY, 98, "XOVI activated")
 
             # Optional: Install tripletap if enabled (convenience feature)
             if self.config.installation.enable_tripletap:
@@ -577,23 +575,112 @@ class InstallationService:
             self._log_output("Shim files configured successfully!")
             self._log_output("Basic XOVI setup completed, now creating essential scripts...")
             
-            # Step 7: Create the CRITICAL start script (MISSING in original Python implementation!)
-            start_script_content = '''#!/bin/bash
-mkdir -p /etc/systemd/system/xochitl.service.d
-mount -t tmpfs tmpfs /etc/systemd/system/xochitl.service.d
-cat << END > /etc/systemd/system/xochitl.service.d/xovi.conf
+            # Step 7: Create the CRITICAL start script with enhanced Paper Pro handling and logging
+            result7a = self.network_service.execute_command("""cd /home/root && cat > xovi/start << 'START_SCRIPT_EOF'
+#!/bin/bash
+
+LOG_DIR="/home/root/xovi"
+LOG_FILE="${LOG_DIR}/start.log"
+OVERRIDE_SRC="/home/root/xovi/etc_override"
+OVERRIDE_TARGET="/etc/systemd/system/xochitl.service.d"
+OVERRIDE_FILE="${OVERRIDE_TARGET}/xovi.conf"
+
+mkdir -p "$LOG_DIR"
+touch "$LOG_FILE"
+
+timestamp() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+log() {
+    local message="$1"
+    echo "$(timestamp) - $message" | tee -a "$LOG_FILE"
+}
+
+log "----- XOVI start invoked -----"
+
+IS_PAPER_PRO=0
+if grep -qE "reMarkable (Ferrari|Chiappa)" /proc/device-tree/model 2>/dev/null; then
+    IS_PAPER_PRO=1
+    log "Detected reMarkable Paper Pro - enabling special filesystem handling"
+fi
+
+ensure_rw() {
+    if [ "$IS_PAPER_PRO" -eq 1 ]; then
+        log "Attempting to remount root filesystem as read-write"
+        mount -o remount,rw / 2>/dev/null && log "Root filesystem remounted read-write" || log "Warning: Could not remount root filesystem"
+
+        if mountpoint -q /etc; then
+            mount -o remount,rw /etc 2>/dev/null && log "/etc remounted read-write" || log "Warning: Could not remount /etc"
+        fi
+    fi
+}
+
+restore_ro() {
+    if [ "$IS_PAPER_PRO" -eq 1 ]; then
+        mount -o remount,ro /etc 2>/dev/null || true
+        mount -o remount,ro / 2>/dev/null || true
+        log "Restored read-only mounts"
+    fi
+}
+
+prepare_override() {
+    ensure_rw
+    mkdir -p "$OVERRIDE_SRC"
+    chmod 755 "$OVERRIDE_SRC"
+    rm -f "$OVERRIDE_SRC/xovi.conf"
+    mkdir -p "$OVERRIDE_TARGET"
+}
+
+write_override() {
+    log "Writing override definition to $OVERRIDE_SRC/xovi.conf"
+    if ! cat << 'END_XOVI_CONF' > "$OVERRIDE_SRC/xovi.conf"; then
+        log "ERROR: Could not write source override file"
+        return 1
+    fi
 [Service]
 Environment="QML_DISABLE_DISK_CACHE=1"
 Environment="QML_XHR_ALLOW_FILE_WRITE=1"
 Environment="QML_XHR_ALLOW_FILE_READ=1"
 Environment="LD_PRELOAD=/home/root/xovi/xovi.so"
-END
+END_XOVI_CONF
 
+    chmod 644 "$OVERRIDE_SRC/xovi.conf"
+
+    ensure_rw
+    log "Copying override into $OVERRIDE_FILE"
+    if ! cp "$OVERRIDE_SRC/xovi.conf" "$OVERRIDE_FILE"; then
+        log "ERROR: Failed to copy override into /etc"
+        return 1
+    fi
+    chmod 644 "$OVERRIDE_FILE"
+    sync
+    log "Override file deployed"
+}
+
+prepare_override
+if ! write_override; then
+    restore_ro
+    exit 1
+fi
+restore_ro
+
+log "Reloading systemd daemon"
 systemctl daemon-reload
-systemctl restart xochitl'''
-            
-            # Create start script using a safer method - avoid heredoc embedding issues
-            result7a = self.network_service.execute_command(f"cd /home/root && echo \"{start_script_content}\" > xovi/start")
+
+log "Restarting xochitl with XOVI preload"
+if systemctl restart xochitl; then
+    log "xochitl restart completed successfully"
+else
+    RC=$?
+    log "xochitl restart returned exit code $RC (often expected when activating XOVI)"
+fi
+
+restore_ro
+log "XOVI start script completed"
+exit 0
+START_SCRIPT_EOF
+""")
             if not result7a.success:
                 self._log_output(f"Start script creation failed: {result7a.stderr}")
                 return False
@@ -603,16 +690,29 @@ systemctl restart xochitl'''
                 self._log_output(f"Start script permission setting failed: {result7b.stderr}")
                 return False
             
-            # Step 8: Create stop script
-            stop_script_content = '''#!/bin/bash
+            # Step 8: Create stop script using heredoc for reliability
+            result7c = self.network_service.execute_command("""cd /home/root && cat > xovi/stop << 'STOP_SCRIPT_EOF'
+#!/bin/bash
 # WARNING: This script stops XOVI and disables USB ethernet gadget
 # ONLY use this in restore/uninstall scripts, NEVER during live operations
-umount /etc/systemd/system/xochitl.service.d 2>/dev/null || true
-rmdir /etc/systemd/system/xochitl.service.d 2>/dev/null || true
+
+LOG_FILE="/home/root/xovi/start.log"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+}
+
+log "----- XOVI stop invoked -----"
+
+if mountpoint -q /etc/systemd/system/xochitl.service.d; then
+    umount /etc/systemd/system/xochitl.service.d 2>/dev/null || log "Warning: Failed to unmount override bind"
+fi
+
 systemctl daemon-reload
-systemctl restart xochitl'''
-            
-            result7c = self.network_service.execute_command(f"cd /home/root && echo \"{stop_script_content}\" > xovi/stop")
+systemctl restart xochitl
+log "XOVI stop completed"
+STOP_SCRIPT_EOF
+""")
             if not result7c.success:
                 self._log_output(f"Stop script creation failed: {result7c.stderr}")
                 return False
@@ -621,6 +721,63 @@ systemctl restart xochitl'''
             if not result7d.success:
                 self._log_output(f"Stop script permission setting failed: {result7d.stderr}")
                 return False
+            
+            # Step 8b: CRITICAL - Create autostart systemd service for XOVI
+            # This ensures XOVI tmpfs overlay persists across reboots (especially important for Paper Pro)
+            self._log_output("Creating XOVI autostart service for persistent activation...")
+            result7e = self.network_service.execute_command("""cd /home/root && cat > xovi/xovi-autostart.service << 'AUTOSTART_SERVICE_EOF'
+[Unit]
+Description=XOVI Auto-Start Service
+After=multi-user.target
+Before=xochitl.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/mkdir -p /etc/systemd/system/xochitl.service.d
+ExecStart=/home/root/xovi/start
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+AUTOSTART_SERVICE_EOF
+""")
+            if not result7e.success:
+                self._log_output(f"Warning: Autostart service creation failed: {result7e.stderr}")
+                self._log_output("XOVI may not persist across reboots - manual activation may be needed")
+            else:
+                # Enable the autostart service without immediately triggering xochitl restart
+                detection_result = self.network_service.execute_command(
+                    "grep -qE 'reMarkable (Ferrari|Chiappa)' /proc/device-tree/model && echo PAPER_PRO || echo OTHER"
+                )
+                is_paper_pro = detection_result.success and "PAPER_PRO" in detection_result.stdout
+                if is_paper_pro:
+                    self._log_output("Paper Pro detected while enabling autostart - temporarily remounting / and /etc read-write")
+                    self.network_service.execute_command("mount -o remount,rw / 2>/dev/null || true")
+                    self.network_service.execute_command("mount -o remount,rw /etc 2>/dev/null || true")
+
+                enable_steps = [
+                    ("create systemd directory", "mkdir -p /etc/systemd/system"),
+                    ("install autostart service", "cp /home/root/xovi/xovi-autostart.service /etc/systemd/system/xovi-autostart.service && chmod 644 /etc/systemd/system/xovi-autostart.service"),
+                    ("reload systemd", "systemctl daemon-reload"),
+                    ("enable autostart service", "systemctl enable xovi-autostart.service")
+                ]
+
+                enable_success = True
+                for description, command in enable_steps:
+                    step_result = self.network_service.execute_command(command)
+                    if not step_result.success:
+                        self._log_output(f"Warning: Failed to {description}: {step_result.stderr or step_result.stdout}")
+                        enable_success = False
+                        break
+
+                if is_paper_pro:
+                    self.network_service.execute_command("mount -o remount,ro /etc 2>/dev/null || true")
+                    self.network_service.execute_command("mount -o remount,ro / 2>/dev/null || true")
+
+                if enable_success:
+                    self._log_output("XOVI autostart service enabled - it will run automatically on each boot")
+                else:
+                    self._log_output("Warning: Could not fully enable XOVI autostart service - manual setup may be required")
 
             # Step 9: Create the rebuild script in a separate step for better debugging
             rebuild_script_content = '''#!/bin/bash
@@ -747,7 +904,6 @@ echo "XOVI hashtable rebuild completed successfully!"'''
                 
                 # Extract KOReader (line 1053)
                 unzip -q {koreader_filename}
-                
                 # Create AppLoad directory structure (line 1056)
                 mkdir -p /home/root/xovi/exthome/appload
                 
@@ -814,14 +970,22 @@ echo "XOVI hashtable rebuild completed successfully!"'''
         result = self.network_service.execute_command("cd /home/root/xovi && ./start")
         
         if not result.success:
+            # Check for exit code -1 (connection timeout/failure)
+            if result.exit_code == -1:
+                self._log_output("Expected: Connection lost during XOVI activation - this is normal")
+                self._log_output("The xochitl restart caused the connection to drop (expected behavior)")
+                self._log_output("XOVI has been activated but requires a HARD REBOOT to function properly")
+                self._log_output("Installation is SUCCESSFUL - device needs power button reboot")
+                return True
             # Check if this is the expected "Job for xochitl.service failed" error
-            if "job for xochitl.service failed" in result.stderr.lower() or "failed" in result.stderr.lower():
+            elif "job for xochitl.service failed" in result.stderr.lower() or "failed" in result.stderr.lower():
                 self._log_output("Expected: XOVI activation caused xochitl restart failure - this is normal")
                 self._log_output("XOVI has been activated but requires a HARD REBOOT to function properly")
                 self._log_output("Installation is SUCCESSFUL - device needs power button reboot")
                 return True
             else:
-                self._log_output(f"CRITICAL: Unexpected XOVI activation error: {result.stderr}")
+                self._log_output(f"CRITICAL: Unexpected XOVI activation error (exit code: {result.exit_code})")
+                self._log_output(f"Error details: {result.stderr or 'No error details available'}")
                 self._log_output("This may be a fatal error. Please check device status.")
                 return False
             
@@ -1304,13 +1468,25 @@ resource        qmldiff:literm.qmd
             restart_result = self.network_service.execute_command("systemctl restart xochitl")
             
             if not restart_result.success:
-                # This is EXPECTED behavior with XOVI - the service fails because XOVI requires a hard reboot
-                if "failed" in restart_result.stderr.lower() or "job for xochitl.service failed" in restart_result.stderr:
+                # Check for exit code -1 (timeout/connection failure)
+                if restart_result.exit_code == -1:
+                    self._log_output("Expected: Connection timeout during xochitl restart - this is normal")
+                    self._log_output("The device connection was lost during service restart (expected behavior)")
+                    self._log_output("IMPORTANT: XOVI requires a HARD REBOOT (power button) to fully activate")
+                    self._log_output("Installation is SUCCESSFUL - please reboot device with power button")
+                # Check for standard xochitl service failure (also expected with XOVI)
+                elif "failed" in restart_result.stderr.lower() or "job for xochitl.service failed" in restart_result.stderr.lower():
                     self._log_output("Expected: xochitl service restart failed - this is normal with XOVI installation")
                     self._log_output("CRITICAL: XOVI requires a HARD REBOOT to activate properly")
                     self._log_output("Installation is SUCCESSFUL but device needs power button reboot")
                 else:
-                    self._log_output(f"Unexpected restart error: {restart_result.stderr}")
+                    # Truly unexpected error
+                    self._log_output(f"Unexpected restart error (exit code: {restart_result.exit_code}): {restart_result.stderr or 'No error details'}")
+                    self._log_output("Installation may still be successful - try a hard reboot")
+                
+                # Apply ethernet fix after restart attempt (connection may have been disrupted)
+                self._log_output("Re-applying USB ethernet fix to restore connection...")
+                self._apply_ethernet_safety_fix()
                 
                 # Installation is still successful - the hard reboot popup will handle the rest
                 return True

@@ -81,7 +81,7 @@ class DownloadConfig:
             # Fallback to hardcoded URLs if weblist loading fails
             logging.warning(f"Failed to load URLs from weblist, using fallback values: {e}")
             self.xovi_extensions_url = "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip"
-            self.appload_url = "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip"
+            self.appload_url = "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-arm32.zip"
             self.xovi_binary_url = "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so"
             self.koreader_url = "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
             self.xovi_tripletap_url = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip"
@@ -90,13 +90,13 @@ class DownloadConfig:
             self._url_mappings = {
                 "arm32": {
                     "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip",
-                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-arm32.zip",
+                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-arm32.zip",
                     "xovi_binary": "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so",
                     "koreader": "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
                 },
                 "aarch64": {
                     "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip",
-                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.2.4/appload-aarch64.zip",
+                    "appload": "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-aarch64.zip",
                     "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so",
                     "koreader": "https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip"
                 }
