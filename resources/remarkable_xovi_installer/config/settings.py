@@ -80,25 +80,25 @@ class DownloadConfig:
         except Exception as e:
             # Fallback to hardcoded URLs if weblist loading fails
             logging.warning(f"Failed to load URLs from weblist, using fallback values: {e}")
-            self.xovi_extensions_url = "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip"
+            self.xovi_extensions_url = "https://github.com/asivery/rm-xovi-extensions/releases/download/v16-14112025/extensions-arm32-testing.zip"
             self.appload_url = "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-arm32.zip"
-            self.xovi_binary_url = "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so"
-            self.koreader_url = "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
-            self.xovi_tripletap_url = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/heads/main.zip"
+            self.xovi_binary_url = "https://github.com/asivery/xovi/releases/download/v0.3.1/xovi-arm32.so"
+            self.koreader_url = "https://github.com/koreader/koreader/releases/download/v2025.10/koreader-remarkable-v2025.10.zip"
+            self.xovi_tripletap_url = "https://github.com/rmitchellscott/xovi-tripletap/archive/refs/tags/v0.3.0.zip"
             
             # Fallback architecture-specific URL mappings
             self._url_mappings = {
                 "arm32": {
-                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-arm32-testing.zip",
+                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v16-14112025/extensions-arm32-testing.zip",
                     "appload": "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-arm32.zip",
-                    "xovi_binary": "https://github.com/asivery/xovi/releases/latest/download/xovi-arm32.so",
-                    "koreader": "https://github.com/koreader/koreader/releases/download/v2025.08/koreader-remarkable-v2025.08.zip"
+                    "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.3.1/xovi-arm32.so",
+                    "koreader": "https://github.com/koreader/koreader/releases/download/v2025.10/koreader-remarkable-v2025.10.zip"
                 },
                 "aarch64": {
-                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v12-12082025/extensions-aarch64.zip",
+                    "xovi_extensions": "https://github.com/asivery/rm-xovi-extensions/releases/download/v16-14112025/extensions-aarch64.zip",
                     "appload": "https://github.com/asivery/rm-appload/releases/download/v0.4.1/appload-aarch64.zip",
-                    "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.2.2/xovi-aarch64.so",
-                    "koreader": "https://build.koreader.rocks/download/stable/v2025.08/koreader-remarkable-aarch64-v2025.08.zip"
+                    "xovi_binary": "https://github.com/asivery/xovi/releases/download/v0.3.1/xovi-aarch64.so",
+                    "koreader": "https://github.com/koreader/koreader/releases/download/v2025.10/koreader-remarkable-aarch64-v2025.10.zip"
                 }
             }
     
@@ -172,7 +172,7 @@ class DownloadConfig:
                 "xovi_extensions": "extensions-arm32-testing.zip",
                 "appload": "appload-arm32.zip",
                 "xovi_binary": "xovi-arm32.so",
-                "koreader": "koreader-remarkable-v2025.08.zip"
+                "koreader": "koreader-remarkable-v2025.10.zip"
             }
         else:
             # 64-bit aarch64 filenames for Paper Pro
@@ -180,7 +180,7 @@ class DownloadConfig:
                 "xovi_extensions": "extensions-aarch64.zip",
                 "appload": "appload-aarch64.zip",
                 "xovi_binary": "xovi-aarch64.so",
-                "koreader": "koreader-remarkable-aarch64-v2025.08.zip"
+                "koreader": "koreader-remarkable-aarch64-v2025.10.zip"
             }
         
         return filename_map.get(component, f"{component}.zip")

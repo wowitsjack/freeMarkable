@@ -49,7 +49,7 @@ if not exist "%RESOURCES_DIR%\main.py" (
 REM Install requirements if needed
 if exist "%RESOURCES_DIR%\requirements.txt" (
     echo Installing Python dependencies...
-    python -m pip install -r "%RESOURCES_DIR%\requirements.txt" --user
+    python -m pip install -r "%RESOURCES_DIR%\requirements.txt" 
     echo.
 )
 

@@ -48,7 +48,7 @@ fi
 
 # Install required packages
 echo "Installing required Python packages..."
-python3 -m pip install -q --user -r resources/requirements.txt
+python3 -m pip install -q  -r resources/requirements.txt
 
 # Launch the application
 echo "Starting freeMarkable..."
