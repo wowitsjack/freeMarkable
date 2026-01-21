@@ -214,3 +214,7 @@ This project is licensed under the terms specified in the LICENSE file.
 ---
 
 **freeMarkable** - XOVI installation made simple and safe for all reMarkable devices.
+
+## Credits & Contributors
+
+- **[@BSkando](https://github.com/BSkando)** - Paper Pro fixes, project revival, and v1.1.1 release
