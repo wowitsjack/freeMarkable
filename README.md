@@ -1,5 +1,7 @@
 # freeMarkable Revived
 
+[![Download](https://img.shields.io/badge/Download-v1.1.1b-blue?style=for-the-badge)](https://github.com/wowitsjack/freeMarkable/releases/download/v1.1.1b/freeMarkable-v1.1.1b.zip)
+
 Support for Remarkable PaperPro has been repaired
 
 **Big thanks to [@BSkando](https://github.com/BSkando) and [@eyeplum](https://github.com/eyeplum) for bringing this project back to life!**
