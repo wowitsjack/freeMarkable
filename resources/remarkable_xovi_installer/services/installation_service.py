@@ -634,16 +634,18 @@ prepare_override() {
 
 write_override() {
     log "Writing override definition to $OVERRIDE_SRC/xovi.conf"
-    if ! cat << 'END_XOVI_CONF' > "$OVERRIDE_SRC/xovi.conf"; then
-        log "ERROR: Could not write source override file"
-        return 1
-    fi
+    cat << 'END_XOVI_CONF' > "$OVERRIDE_SRC/xovi.conf"
 [Service]
 Environment="QML_DISABLE_DISK_CACHE=1"
 Environment="QML_XHR_ALLOW_FILE_WRITE=1"
 Environment="QML_XHR_ALLOW_FILE_READ=1"
 Environment="LD_PRELOAD=/home/root/xovi/xovi.so"
 END_XOVI_CONF
+
+    if [ $? -ne 0 ]; then
+        log "ERROR: Could not write source override file"
+        return 1
+    fi
 
     chmod 644 "$OVERRIDE_SRC/xovi.conf"
 
